@@ -1,0 +1,37 @@
+# Logs
+# Log files from various tools and processes.
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dependencies
+# Locally installed package dependencies.
+node_modules
+
+# Build & Distribution
+# Compiled or bundled files for production.
+dist
+dist-ssr
+
+# Local Environment
+# Environment-specific configuration files that should not be committed.
+*.local
+
+# Editor Directories and Files
+# Configuration files from code editors to avoid team conflicts.
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# OS & Temporary Files
+# System-generated files and temporary swap files.
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

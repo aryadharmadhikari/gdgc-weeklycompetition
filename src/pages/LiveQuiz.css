@@ -1,0 +1,193 @@
+/* src/components/LiveQuiz.css */
+
+/* --- Import Google Font (Roboto) --- */
+/* Add this to your main index.css or index.html for better performance */
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+
+/* --- Google Color Palette --- */
+:root {
+  --google-blue: #4285f4;
+  --google-red: #db4437;
+  --google-yellow: #f4b400;
+  --google-green: #0f9d58;
+  --google-text-dark: #3c4043;
+  --google-text-light: #5f6368;
+  --google-bg-grey: #f8f9fa;
+  --google-border-grey: #dadce0;
+}
+
+body {
+  font-family: 'Roboto', 'Arial', sans-serif;
+  background-color: var(--google-bg-grey);
+}
+
+.quiz-page-container {
+  display: flex;
+  justify-content: center;
+  padding: 2rem;
+  min-height: 100vh;
+}
+
+.quiz-content {
+  width: 100%;
+  max-width: 900px;
+}
+
+.quiz-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--google-blue);
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+
+.quiz-subtitle {
+  font-size: 1.1rem;
+  color: var(--google-text-light);
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+/* --- Question Card / Accordion --- */
+.question-card {
+  background-color: #ffffff;
+  border: 1px solid var(--google-border-grey);
+  border-radius: 8px;
+  margin-bottom: 1.25rem;
+  box-shadow: 0 1px 2px 0 rgba(60, 64, 67, 0.3),
+    0 1px 3px 1px rgba(60, 64, 67, 0.15);
+  overflow: hidden;
+  transition: box-shadow 0.3s ease;
+}
+
+.question-card:hover {
+  box-shadow: 0 1px 3px 0 rgba(60, 64, 67, 0.3),
+    0 4px 8px 3px rgba(60, 64, 67, 0.15);
+}
+
+.question-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.question-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: var(--google-text-dark);
+}
+
+.accordion-icon {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--google-blue);
+}
+
+.question-body {
+  padding: 0 1.5rem 1.5rem 1.5rem;
+  border-top: 1px solid var(--google-border-grey);
+}
+
+.question-prompt {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--google-text-light);
+  margin-bottom: 1.5rem;
+}
+
+/* --- Master Question Highlight --- */
+.master-question .question-header {
+  background-color: #fef7e0; /* Light yellow bg */
+}
+
+.master-tag {
+  color: var(--google-red);
+  font-weight: 700;
+  font-size: 0.9rem;
+  margin-left: 0.5rem;
+  vertical-align: middle;
+}
+
+/* --- Code Editor --- */
+.editor-wrapper {
+  border: 1px solid var(--google-border-grey);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.editor-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  background-color: #f1f3f4;
+}
+
+.editor-toolbar label {
+  font-size: 0.9rem;
+  color: var(--google-text-light);
+  margin-right: 0.5rem;
+}
+
+.lang-select {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--google-border-grey);
+  border-radius: 4px;
+  font-family: 'Roboto', sans-serif;
+  font-size: 0.9rem;
+}
+
+.code-editor {
+  width: 100%;
+  min-height: 300px;
+  border: none;
+  padding: 1rem;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  background-color: #282c34; /* Dark editor theme */
+  color: #f8f8f2; /* Light text */
+  resize: vertical;
+  box-sizing: border-box; /* Important for padding */
+}
+
+.code-editor:focus {
+  outline: 2px solid var(--google-blue);
+}
+
+/* --- Submit Button --- */
+.submit-quiz-button {
+  display: block;
+  width: 100%;
+  padding: 0.8rem 1rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #ffffff;
+  background-color: var(--google-green);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-top: 1rem;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.submit-quiz-button:hover {
+  background-color: #0c804a; /* Darker green */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* --- Error Message --- */
+.quiz-error-message {
+  padding: 1rem;
+  background-color: #fbe9e7;
+  color: var(--google-red);
+  border: 1px solid var(--google-red);
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  font-weight: 500;
+}

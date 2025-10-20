@@ -1,5 +1,5 @@
-// src/components/layout/Header.jsx
 import React from 'react';
+import { Link } from 'react-router-dom'; // Import Link for routing
 import { gdgTheme } from '../../theme/gdgctheme';
 import gdgLogo from '../../assets/images/light_gdgdbit_logo.jpg'; // Direct import
 
@@ -21,38 +21,62 @@ const Header = () => {
                 maxWidth: '1200px',
                 margin: '0 auto'
             }}>
-                {/* Direct logo usage */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: gdgTheme.spacing.md }}>
-                    <img
-                        src={gdgLogo}
-                        alt="GDG Logo"
-                        style={{
-                            height: '80px',
-                            width: 'auto',
-                            objectFit: 'contain'
-                        }}
-                    />
-                </div>
+                {/* Logo links to the homepage */}
+                <Link to="/" style={{ textDecoration: 'none' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: gdgTheme.spacing.md }}>
+                        <img
+                            src={gdgLogo}
+                            alt="GDG Logo"
+                            style={{
+                                height: '80px',
+                                width: 'auto',
+                                objectFit: 'contain'
+                            }}
+                        />
+                    </div>
+                </Link>
 
                 {/* Navigation */}
                 <nav style={{ display: 'flex', gap: gdgTheme.spacing.lg, alignItems: 'center' }}>
-                    {['Home', 'Events', 'Leaderboard'].map((item) => (
-                        <a
-                            key={item}
-                            href={`#${item.toLowerCase()}`}
-                            style={{
-                                color: gdgTheme.colors.text.primary,
-                                textDecoration: 'none',
-                                ...gdgTheme.typography.styles.navLink,
-                                padding: `${gdgTheme.spacing.sm} ${gdgTheme.spacing.md}`,
-                                borderRadius: gdgTheme.borderRadius.medium
-                            }}
-                        >
-                            {item}
-                        </a>
-                    ))}
+                    {['Home', 'Events', 'Leaderboard'].map((item) => {
+                        // Use Link for 'Home', and standard 'a' tags for on-page links
+                        if (item === 'Home') {
+                            return (
+                                <Link
+                                    key={item}
+                                    to="/"
+                                    style={{
+                                        color: gdgTheme.colors.text.primary,
+                                        textDecoration: 'none',
+                                        ...gdgTheme.typography.styles.navLink,
+                                        padding: `${gdgTheme.spacing.sm} ${gdgTheme.spacing.md}`,
+                                        borderRadius: gdgTheme.borderRadius.medium
+                                    }}
+                                >
+                                    {item}
+                                </Link>
+                            );
+                        }
+                        return (
+                            <a
+                                key={item}
+                                href={`#${item.toLowerCase()}`}
+                                style={{
+                                    color: gdgTheme.colors.text.primary,
+                                    textDecoration: 'none',
+                                    ...gdgTheme.typography.styles.navLink,
+                                    padding: `${gdgTheme.spacing.sm} ${gdgTheme.spacing.md}`,
+                                    borderRadius: gdgTheme.borderRadius.medium
+                                }}
+                            >
+                                {item}
+                            </a>
+                        );
+                    })}
 
-                    <button
+                    {/* Converted the button to a Link for routing */}
+                    <Link
+                        to="/live-quiz"
                         style={{
                             backgroundColor: gdgTheme.colors.primary.blue,
                             color: gdgTheme.colors.text.inverse,
@@ -61,11 +85,12 @@ const Header = () => {
                             padding: `${gdgTheme.spacing.md} ${gdgTheme.spacing.lg}`,
                             borderRadius: gdgTheme.borderRadius.medium,
                             cursor: 'pointer',
-                            boxShadow: gdgTheme.shadows.button
+                            boxShadow: gdgTheme.shadows.button,
+                            textDecoration: 'none' // Ensures it doesn't look like a hyperlink
                         }}
                     >
                         Live Quiz
-                    </button>
+                    </Link>
                 </nav>
             </div>
         </header>

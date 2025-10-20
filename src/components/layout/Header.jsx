@@ -6,7 +6,7 @@ import gdgLogo from '../../assets/images/light_gdgdbit_logo.jpg'; // Direct impo
 const Header = () => {
     return (
         <header style={{
-            backgroundColor: gdgTheme.colors.background.white,
+            backgroundColor: gdgTheme.colors.background.primary,
             color: gdgTheme.colors.text.primary,
             padding: `${gdgTheme.spacing.md} ${gdgTheme.spacing.xl}`,
             position: 'static',

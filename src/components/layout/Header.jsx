@@ -76,6 +76,18 @@ const Header = () => {
 
                     {/* Converted the button to a Link for routing */}
                     <Link
+                        to="/explanations"
+                        style={{
+                            color: gdgTheme.colors.text.primary,
+                                    textDecoration: 'none',
+                                    ...gdgTheme.typography.styles.navLink,
+                                    padding: `${gdgTheme.spacing.sm} ${gdgTheme.spacing.md}`,
+                                    borderRadius: gdgTheme.borderRadius.medium
+                        }}
+                    >
+                        Explanations
+                    </Link>
+                    <Link
                         to="/live-quiz"
                         style={{
                             backgroundColor: gdgTheme.colors.primary.blue,
@@ -91,6 +103,7 @@ const Header = () => {
                     >
                         Live Quiz
                     </Link>
+                    
                 </nav>
             </div>
         </header>

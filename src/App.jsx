@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Landing from './pages/Landing';
 import { loadGoogleFonts, gdgTheme } from './theme/gdgctheme';
 import LiveQuiz from './pages/LiveQuiz';
+import Explanations from './pages/Explanations';
 function App() {
     // Load Google Fonts when app starts
     
@@ -27,7 +28,7 @@ function App() {
                     
                     {/* Route for the live quiz page */}
                     <Route path="/live-quiz" element={<LiveQuiz />} />
-                    
+                    <Route path="/explanations" element={<Explanations />} />
                     {/* You can add more routes here in the future */}
                 </Routes>
             </Router>

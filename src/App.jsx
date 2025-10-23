@@ -1,37 +1,34 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Landing from './pages/Landing';
+import Leaderboard from './pages/Leaderboard';
+import { AuthProvider } from './hooks/useAuth.jsx';
 import { loadGoogleFonts, gdgTheme } from './theme/gdgctheme';
-import LiveQuiz from './pages/LiveQuiz';
+import LiveQuiz from "./pages/LiveQuiz.jsx";
+
 function App() {
-    // Load Google Fonts when app starts
-    
     useEffect(() => {
         loadGoogleFonts();
     }, []);
 
     return (
-        <div
-            className="App"
-            style={{
-                fontFamily: gdgTheme.typography.primary.family,
-                color: gdgTheme.colors.text.primary
-            }}
-        >
-            <Router>
-                
-                {/* The Routes component will switch between your pages */}
-                <Routes>
-                    {/* Route for the landing page */}
-                    <Route path="/" element={<Landing />} />
-                    
-                    {/* Route for the live quiz page */}
-                    <Route path="/live-quiz" element={<LiveQuiz />} />
-                    
-                    {/* You can add more routes here in the future */}
-                </Routes>
-            </Router>
-        </div>
+        <AuthProvider>
+            <div
+                className="App"
+                style={{
+                    fontFamily: gdgTheme.typography.primary.family,
+                    color: gdgTheme.colors.text.primary
+                }}
+            >
+                <Router>
+                    <Routes>
+                        <Route path="/" element={<Landing />} />
+                        <Route path="/leaderboard" element={<Leaderboard />} />
+                        <Route path="/live-quiz" element={<LiveQuiz />} />
+                    </Routes>
+                </Router>
+            </div>
+        </AuthProvider>
     );
 }
 

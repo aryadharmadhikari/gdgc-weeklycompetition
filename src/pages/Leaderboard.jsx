@@ -3,7 +3,7 @@ import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
 import { gdgTheme } from '../theme/gdgctheme';
 import GoogleBrandLines from '../components/common/GoogleBrandLines';
-import { getLeaderboardData } from '../services/leaderboardService';
+import { getLeaderboardData } from '../services/leaderboardService.jsx';
 
 const Leaderboard = () => {
     const [data, setData] = useState([]);

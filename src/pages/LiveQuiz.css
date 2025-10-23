@@ -1,7 +1,6 @@
-/* src/components/LiveQuiz.css */
+/* src/pages/LiveQuiz.css */
 
 /* --- Import Google Font (Roboto) --- */
-/* Add this to your main index.css or index.html for better performance */
 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
 
 /* --- Google Color Palette --- */
@@ -31,6 +30,33 @@ body {
 .quiz-content {
   width: 100%;
   max-width: 900px;
+  position: relative;
+}
+
+/* --- Back Link and Header Controls --- */
+.quiz-header-controls {
+  margin-bottom: 1rem;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--google-blue);
+  text-decoration: none;
+  font-size: 1rem;
+  font-weight: 500;
+  padding: 8px 12px;
+  border-radius: 8px;
+  transition: background-color 0.2s ease-in-out;
+}
+
+.back-link:hover {
+  background-color: #e8f0fe;
+}
+
+.back-link svg {
+  color: var(--google-blue);
 }
 
 .quiz-title {
@@ -38,7 +64,7 @@ body {
   font-weight: 700;
   color: var(--google-blue);
   text-align: center;
-  margin-bottom: 0.5rem;
+  margin: 0 0 1rem 0;
 }
 
 .quiz-subtitle {
@@ -46,7 +72,43 @@ body {
   color: var(--google-text-light);
   text-align: center;
   margin-bottom: 2rem;
+  margin-top: 0.5rem;
 }
+
+/* --- Week Navigation --- */
+.week-nav {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid var(--google-border-grey);
+  padding-bottom: 1rem;
+}
+
+.week-nav-button {
+  padding: 0.6rem 1.2rem;
+  font-size: 1rem;
+  font-weight: 500;
+  border: 1px solid var(--google-border-grey);
+  border-radius: 20px;
+  background-color: #fff;
+  color: var(--google-text-light);
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.week-nav-button:hover {
+  background-color: #f1f3f4;
+  border-color: #cdd1d5;
+}
+
+.week-nav-button.active {
+  background-color: var(--google-blue);
+  color: #fff;
+  border-color: var(--google-blue);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
 
 /* --- Question Card / Accordion --- */
 .question-card {
@@ -99,9 +161,8 @@ body {
   margin-bottom: 1.5rem;
 }
 
-/* --- Master Question Highlight --- */
 .master-question .question-header {
-  background-color: #fef7e0; /* Light yellow bg */
+  background-color: #fef7e0;
 }
 
 .master-tag {
@@ -117,6 +178,7 @@ body {
   border: 1px solid var(--google-border-grey);
   border-radius: 8px;
   overflow: hidden;
+  margin-top: 1.5rem;
 }
 
 .editor-toolbar {
@@ -125,12 +187,12 @@ body {
   align-items: center;
   padding: 0.5rem 1rem;
   background-color: #f1f3f4;
+  gap: 0.5rem;
 }
 
 .editor-toolbar label {
   font-size: 0.9rem;
   color: var(--google-text-light);
-  margin-right: 0.5rem;
 }
 
 .lang-select {
@@ -149,10 +211,10 @@ body {
   font-family: 'Courier New', Courier, monospace;
   font-size: 0.95rem;
   line-height: 1.5;
-  background-color: #282c34; /* Dark editor theme */
-  color: #f8f8f2; /* Light text */
+  background-color: #282c34;
+  color: #f8f8f2;
   resize: vertical;
-  box-sizing: border-box; /* Important for padding */
+  box-sizing: border-box;
 }
 
 .code-editor:focus {
@@ -176,7 +238,7 @@ body {
 }
 
 .submit-quiz-button:hover {
-  background-color: #0c804a; /* Darker green */
+  background-color: #0c804a;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
@@ -191,3 +253,108 @@ body {
   text-align: center;
   font-weight: 500;
 }
+
+/* --- NEW: Test Case Viewer Styles --- */
+.test-cases-wrapper {
+  border: 1px solid var(--google-border-grey);
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  background-color: #f8f9fa; /* Light grey background */
+  overflow: hidden;
+}
+
+.test-cases-title {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--google-text-dark);
+  margin: 0;
+  padding: 0.8rem 1.2rem;
+  border-bottom: 1px solid var(--google-border-grey);
+}
+
+.test-cases-content {
+  padding: 0.5rem 1.2rem 1.2rem 1.2rem;
+  background-color: #282c34; /* Dark background like LeetCode */
+  color: #f8f8f2; /* Light text */
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.test-case {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.9rem;
+  white-space: pre-wrap; /* Allows line breaks */
+  margin: 0;
+  padding: 0.8rem 0;
+  border-bottom: 1px dashed #5f6368; /* Separator for cases */
+}
+
+.test-case:last-child {
+  border-bottom: none;
+}
+
+/* --- NEW: Q&A Textbox Styles --- */
+.qna-wrapper {
+  margin-top: 2rem;
+}
+
+.qna-title {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--google-text-dark);
+  margin: 0 0 0.25rem 0;
+}
+
+.qna-subtitle {
+  font-size: 0.9rem;
+  color: var(--google-text-light);
+  margin: 0 0 0.75rem 0;
+}
+
+.qna-textarea {
+  width: 100%;
+  min-height: 120px;
+  border: 1px solid var(--google-border-grey);
+  border-radius: 8px;
+  padding: 1rem;
+  font-family: 'Roboto', sans-serif;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  background-color: #fff;
+  color: var(--google-text-dark);
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.qna-textarea:focus {
+  outline: 2px solid var(--google-blue);
+  border-color: var(--google-blue);
+}
+/* ADD THESE STYLES TO THE END of your existing src/pages/LiveQuiz.css file
+*/
+
+.quiz-header-controls {
+  display: flex;
+  justify-content: space-between; /* This will push back-link and admin-btn apart */
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.admin-add-week-btn {
+  background-color: var(--google-blue); /* Using your theme's blue */
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.6rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.admin-add-week-btn:hover {
+  background-color: #3367d6; /* A slightly darker blue */
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+

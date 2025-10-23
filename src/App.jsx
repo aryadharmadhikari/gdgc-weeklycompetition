@@ -1,8 +1,11 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Landing from './pages/Landing';
+
+import { AuthProvider } from './Admin/AuthContext';
 import { loadGoogleFonts, gdgTheme } from './theme/gdgctheme';
 import LiveQuiz from './pages/LiveQuiz';
+import Explanations from './pages/Explanations';
 function App() {
     // Load Google Fonts when app starts
     
@@ -11,6 +14,7 @@ function App() {
     }, []);
 
     return (
+        <AuthProvider>
         <div
             className="App"
             style={{
@@ -27,11 +31,12 @@ function App() {
                     
                     {/* Route for the live quiz page */}
                     <Route path="/live-quiz" element={<LiveQuiz />} />
-                    
+                    <Route path="/explanations" element={<Explanations />} />
                     {/* You can add more routes here in the future */}
                 </Routes>
             </Router>
         </div>
+        </AuthProvider>
     );
 }
 

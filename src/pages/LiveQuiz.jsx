@@ -1,179 +1,505 @@
-// src/components/LiveQuiz.jsx
+// import React, { useState } from 'react';
+// import { Link } from 'react-router-dom'; // Import Link for navigation
+// import './LiveQuiz.css'; // We will update this CSS file next
+
+// // --- Mock Database of Questions (Now includes testCases) ---
+// const allQuestions = {
+//     '1': [
+//         { 
+//             id: 'w1q1', 
+//             title: 'Question 1: FizzBuzz', 
+//             prompt: "Write a program that prints numbers from 1 to 100. For multiples of three print 'Fizz', for multiples of five print 'Buzz', and for multiples of both, print 'FizzBuzz'.", 
+//             isMaster: false,
+//             testCases: [
+//                 "Case 1: No input needed.",
+//                 "Output: 1, 2, Fizz, 4, Buzz, Fizz, ..., 14, FizzBuzz, ..."
+//             ]
+//         },
+//         { 
+//             id: 'w1q2', 
+//             title: 'Question 2: Palindrome Check', 
+//             prompt: 'Given a string, write a function to determine if it is a palindrome.', 
+//             isMaster: false,
+//             testCases: [
+//                 "Case 1:\nInput: \"racecar\"\nOutput: true",
+//                 "Case 2:\nInput: \"hello\"\nOutput: false",
+//                 "Case 3:\nInput: \"A man, a plan, a canal: Panama\"\nOutput: true (after processing)"
+//             ]
+//         },
+//         { 
+//             id: 'w1q3', 
+//             title: 'Question 3: Two Sum', 
+//             prompt: "Given an array of integers 'nums' and an integer 'target', return indices of the two numbers that add up to the target.", 
+//             isMaster: true,
+//             testCases: [
+//                 "Case 1:\nInput: nums = [2, 7, 11, 15], target = 9\nOutput: [0, 1]",
+//                 "Case 2:\nInput: nums = [3, 2, 4], target = 6\nOutput: [1, 2]"
+//             ]
+//         },
+//     ],
+//     '2': [
+//         // ... (Add test cases for other weeks as well)
+//         { id: 'w2q1', title: 'Question 1: Reverse a String', prompt: '..._self_closing', isMaster: false, testCases: ["Input: \"hello\"\nOutput: \"olleh\""] },
+//         { id: 'w2q2', title: 'Question 2: Find the Largest Number', prompt: '..._self_closing', isMaster: false, testCases: ["Input: [1, 5, 2, 9, 3]\nOutput: 9"] },
+//         { id: 'w2q3', title: 'Question 3: Factorial Calculation', prompt: '..._self_closing', isMaster: true, testCases: ["Input: 5\nOutput: 120", "Input: 0\nOutput: 1"] },
+//     ],
+//     // ... (omitted week 3 for brevity)
+// };
+
+// const CodeEditor = ({ code, setCode, lang, setLang }) => {
+//     const languages = ['javascript', 'python', 'java', 'c', 'cpp'];
+//     return (
+//         <div className="editor-wrapper">
+//             <div className="editor-toolbar">
+//                 <label>Language:</label>
+//                 <select value={lang} onChange={(e) => setLang(e.target.value)} className="lang-select">
+//                     {languages.map((l) => (
+//                         <option key={l} value={l}>{l.charAt(0).toUpperCase() + l.slice(1)}</option>
+//                     ))}
+//                 </select>
+//             </div>
+//             <textarea
+//                 className="code-editor"
+//                 value={code}
+//                 onChange={(e) => setCode(e.target.value)}
+//                 placeholder="Write your code here..."
+//                 spellCheck="false"
+//             />
+//         </div>
+//     );
+// };
+
+// // --- NEW Read-only Test Case Viewer ---
+// const TestCaseViewer = ({ testCases }) => (
+//     <div className="test-cases-wrapper">
+//         <h4 className="test-cases-title">Test Cases</h4>
+//         <div className="test-cases-content">
+//             {testCases.map((testCase, index) => (
+//                 <pre key={index} className="test-case">
+//                     {testCase}
+//                 </pre>
+//             ))}
+//         </div>
+//     </div>
+// );
+
+// // --- NEW Editable Q&A Textbox ---
+// const QnaBox = ({ qna, setQna }) => (
+//     <div className="qna-wrapper">
+//         <h4 className="qna-title">Q&A / Notes</h4>
+//         <p className="qna-subtitle">Have questions or notes? Write them here.</p>
+//         <textarea
+//             className="qna-textarea"
+//             value={qna}
+//             onChange={(e) => setQna(e.target.value)}
+//             placeholder="Type your questions or thoughts here..."
+//         />
+//     </div>
+// );
+
+// // --- Updated Question Accordion ---
+// const QuestionAccordion = ({ question, solution, onSolutionChange, qna, onQnaChange, isOpen, onClick }) => {
+//     return (
+//         <div className={`question-card ${question.isMaster ? 'master-question' : ''}`}>
+//             <div className="question-header" onClick={onClick}>
+//                 <h3>{question.title} {question.isMaster && <span className="master-tag">(Mandatory)</span>}</h3>
+//                 <span className="accordion-icon">{isOpen ? '−' : '+'}</span>
+//             </div>
+//             {isOpen && (
+//                 <div className="question-body">
+//                     <p className="question-prompt">{question.prompt}</p>
+                    
+//                     {/* NEW: Test Case Viewer */}
+//                     <TestCaseViewer testCases={question.testCases} />
+
+//                     <CodeEditor
+//                         code={solution.code}
+//                         setCode={(newCode) => onSolutionChange(question.id, { ...solution, code: newCode })}
+//                         lang={solution.lang}
+//                         setLang={(newLang) => onSolutionChange(question.id, { ...solution, lang: newLang })}
+//                     />
+
+//                     {/* NEW: Q&A Box */}
+//                     <QnaBox
+//                         qna={qna}
+//                         setQna={(newQna) => onQnaChange(question.id, newQna)}
+//                     />
+//                 </div>
+//             )}
+//         </div>
+//     );
+// };
+
+// const LiveQuiz = () => {
+//     const [selectedWeek, setSelectedWeek] = useState(Object.keys(allQuestions)[0]);
+//     const [openQuestionId, setOpenQuestionId] = useState(null);
+//     const [solutions, setSolutions] = useState({});
+//     const [qnaMessages, setQnaMessages] = useState({}); // NEW state for Q&A
+//     const [error, setError] = useState('');
+
+//     const currentQuestions = allQuestions[selectedWeek] || [];
+
+//     const handleSolutionChange = (questionId, newSolution) => {
+//         setSolutions(prev => ({
+//             ...prev,
+//             [questionId]: newSolution,
+//         }));
+//     };
+    
+//     // NEW handler for Q&A
+//     const handleQnaChange = (questionId, newQna) => {
+//         setQnaMessages(prev => ({
+//             ...prev,
+//             [questionId]: newQna,
+//         }));
+//     };
+
+//     const handleToggle = (questionId) => {
+//         setOpenQuestionId(prev => (prev === questionId ? null : questionId));
+//     };
+
+//     const handleSubmit = () => {
+//         const masterQuestion = currentQuestions.find(q => q.isMaster);
+//         const masterSolution = solutions[masterQuestion.id]?.code || '';
+
+//         if (!masterQuestion || masterSolution.trim() === '') {
+//             setError('Error: The mandatory question for this week must be answered. Your submission was not recorded.');
+//             setOpenQuestionId(masterQuestion.id);
+//             return;
+//         }
+
+//         setError('');
+//         const submissionData = {
+//             week: selectedWeek,
+//             solutions: currentQuestions.map(q => ({
+//                 questionId: q.id,
+//                 title: q.title,
+//                 language: solutions[q.id]?.lang || 'javascript',
+//                 code: solutions[q.id]?.code || '',
+//                 qna: qnaMessages[q.id] || '', // Include Q&A in submission
+//             })),
+//             submittedAt: new Date().toISOString(),
+//         };
+
+//         console.log('Submitting to database:', submissionData);
+//         alert('Submission Successful!\n(Check the console for the submitted data)');
+//     };
+
+//     return (
+//         <div className="quiz-page-container">
+//             <div className="quiz-content">
+//                 <div className="quiz-header-controls">
+//                     <Link to="/" className="back-link">
+//                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+//                             <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+//                         </svg>
+//                         <span>Back</span>
+//                     </Link>
+//                 </div>
+
+//                 <h1 className="quiz-title">Live Coding Competition</h1>
+                
+//                 <nav className="week-nav">
+//                     {Object.keys(allQuestions).map(week => (
+//                         <button
+//                             key={week}
+//                             className={`week-nav-button ${selectedWeek === week ? 'active' : ''}`}
+//                             onClick={() => {
+//                                 setSelectedWeek(week);
+//                                 setOpenQuestionId(null);
+//                                 setError('');
+//                             }}
+//                         >
+//                             Week {week}
+//                         </button>
+//                     ))}
+//                 </nav>
+
+//                 <p className="quiz-subtitle">
+//                     Select a week to view questions. The final question of each week is mandatory for submission.
+//                 </p>
+
+//                 {error && <div className="quiz-error-message">{error}</div>}
+
+//                 {currentQuestions.map(question => {
+//                     const solution = solutions[question.id] || { code: '', lang: 'javascript' };
+//                     const qna = qnaMessages[question.id] || '';
+//                     return (
+//                         <QuestionAccordion
+//                             key={question.id}
+//                             question={question}
+//                             solution={solution}
+//                             onSolutionChange={handleSolutionChange}
+//                             qna={qna}
+//                             onQnaChange={handleQnaChange}
+//                             isOpen={openQuestionId === question.id}
+//                             onClick={() => handleToggle(question.id)}
+//                         />
+//                     );
+//                 })}
+
+//                 <button className="submit-quiz-button" onClick={handleSubmit}>
+//                     Submit Week {selectedWeek} Answers
+//                 </button>
+//             </div>
+//         </div>
+//     );
+// };
+
+// export default LiveQuiz;
 
 import React, { useState } from 'react';
-import './LiveQuiz.css'; // We will create this CSS file next
+import { Link } from 'react-router-dom';
+import './LiveQuiz.css';
+import { useAuth } from '../Admin/AuthContext'; // <-- IMPORT MOCK AUTH
+import AdminPanel from '../Admin/AdminPanel'; // <-- IMPORT ADMIN MODAL
 
-// This is a reusable component for the language selector and editor
+// --- Mock Database of Questions (from your file) ---
+const allQuestions = {
+    '1': [
+        { 
+            id: 'w1q1', 
+            title: 'Question 1: FizzBuzz', 
+            prompt: "Write a program that prints numbers from 1 to 100. For multiples of three print 'Fizz', for multiples of five print 'Buzz', and for multiples of both, print 'FizzBuzz'.", 
+            isMaster: false,
+            testCases: [
+                "Case 1: No input needed.",
+                "Output: 1, 2, Fizz, 4, Buzz, Fizz, ..., 14, FizzBuzz, ..."
+            ]
+        },
+        { 
+            id: 'w1q2', 
+            title: 'Question 2: Palindrome Check', 
+            prompt: 'Given a string, write a function to determine if it is a palindrome.', 
+            isMaster: false,
+            testCases: [
+                "Case 1:\nInput: \"racecar\"\nOutput: true",
+                "Case 2:\nInput: \"hello\"\nOutput: false",
+            ]
+        },
+        { 
+            id: 'w1q3', 
+            title: 'Question 3: Two Sum', 
+            prompt: "Given an array of integers 'nums' and an integer 'target', return indices of the two numbers that add up to the target.", 
+            isMaster: true,
+            testCases: [
+                "Case 1:\nInput: nums = [2, 7, 11, 15], target = 9\nOutput: [0, 1]",
+                "Case 2:\nInput: nums = [3, 2, 4], target = 6\nOutput: [1, 2]"
+            ]
+        },
+    ],
+    '2': [
+        { id: 'w2q1', title: 'Question 1: Reverse a String', prompt: 'Write a function that takes a string as input and returns the string reversed.', isMaster: false, testCases: ["Input: \"hello\"\nOutput: \"olleh\""] },
+        { id: 'w2q2', title: 'Question 2: Find the Largest Number', prompt: 'Given an array of numbers, find and return the largest element.', isMaster: false, testCases: ["Input: [1, 5, 2, 9, 3]\nOutput: 9"] },
+        { id: 'w2q3', title: 'Question 3: Factorial Calculation', prompt: 'Write a function to calculate the factorial of a non-negative integer.', isMaster: true, testCases: ["Input: 5\nOutput: 120", "Input: 0\nOutput: 1"] },
+    ],
+};
+
+// --- Child Components (CodeEditor, TestCaseViewer, QnaBox, QuestionAccordion) ---
+
 const CodeEditor = ({ code, setCode, lang, setLang }) => {
-  const languages = ['javascript', 'python', 'java', 'c', 'cpp'];
-
-  return (
-    <div className="editor-wrapper">
-      <div className="editor-toolbar">
-        <label htmlFor={`lang-select-${lang}`}>Language: </label>
-        <select
-          id={`lang-select-${lang}`}
-          value={lang}
-          onChange={(e) => setLang(e.target.value)}
-          className="lang-select"
-        >
-          {languages.map((l) => (
-            <option key={l} value={l}>
-              {l.charAt(0).toUpperCase() + l.slice(1)}
-            </option>
-          ))}
-        </select>
-      </div>
-      <textarea
-        className="code-editor"
-        value={code}
-        onChange={(e) => setCode(e.target.value)}
-        placeholder="Write your code here..."
-        spellCheck="false"
-      />
-    </div>
-  );
-};
-
-// This is the main accordion item component
-const QuestionAccordion = ({
-  title,
-  prompt,
-  code,
-  setCode,
-  lang,
-  setLang,
-  isOpen,
-  onClick,
-  isMaster = false,
-}) => {
-  return (
-    <div className={`question-card ${isMaster ? 'master-question' : ''}`}>
-      <div className="question-header" onClick={onClick}>
-        <h3>
-          {title} {isMaster && <span className="master-tag">(Mandatory)</span>}
-        </h3>
-        <span className="accordion-icon">{isOpen ? '−' : '+'}</span>
-      </div>
-      {isOpen && (
-        <div className="question-body">
-          <p className="question-prompt">{prompt}</p>
-          <CodeEditor
-            code={code}
-            setCode={setCode}
-            lang={lang}
-            setLang={setLang}
-          />
+    const languages = ['javascript', 'python', 'java', 'c', 'cpp'];
+    return (
+        <div className="editor-wrapper">
+            <div className="editor-toolbar">
+                <label>Language:</label>
+                <select value={lang} onChange={(e) => setLang(e.target.value)} className="lang-select">
+                    {languages.map((l) => (
+                        <option key={l} value={l}>{l.charAt(0).toUpperCase() + l.slice(1)}</option>
+                    ))}
+                </select>
+            </div>
+            <textarea
+                className="code-editor"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder="Write your code here..."
+                spellCheck="false"
+            />
         </div>
-      )}
+    );
+};
+const TestCaseViewer = ({ testCases }) => (
+    <div className="test-cases-wrapper">
+        <h4 className="test-cases-title">Test Cases</h4>
+        <div className="test-cases-content">
+            {testCases.map((testCase, index) => (
+                <pre key={index} className="test-case">
+                    {testCase}
+                </pre>
+            ))}
+        </div>
     </div>
-  );
+);
+const QnaBox = ({ qna, setQna }) => (
+    <div className="qna-wrapper">
+        <h4 className="qna-title">Q&A / Notes</h4>
+        <p className="qna-subtitle">Have questions or notes? Write them here.</p>
+        <textarea
+            className="qna-textarea"
+            value={qna}
+            onChange={(e) => setQna(e.target.value)}
+            placeholder="Type your questions or thoughts here..."
+        />
+    </div>
+);
+const QuestionAccordion = ({ question, solution, onSolutionChange, qna, onQnaChange, isOpen, onClick }) => {
+    return (
+        <div className={`question-card ${question.isMaster ? 'master-question' : ''}`}>
+            <div className="question-header" onClick={onClick}>
+                <h3>{question.title} {question.isMaster && <span className="master-tag">(Mandatory)</span>}</h3>
+                <span className="accordion-icon">{isOpen ? '−' : '+'}</span>
+            </div>
+            {isOpen && (
+                <div className="question-body">
+                    <p className="question-prompt">{question.prompt}</p>
+                    <TestCaseViewer testCases={question.testCases} />
+                    <CodeEditor
+                        code={solution.code}
+                        setCode={(newCode) => onSolutionChange(question.id, { ...solution, code: newCode })}
+                        lang={solution.lang}
+                        setLang={(newLang) => onSolutionChange(question.id, { ...solution, lang: newLang })}
+                    />
+                    <QnaBox
+                        qna={qna}
+                        setQna={(newQna) => onQnaChange(question.id, newQna)}
+                    />
+                </div>
+            )}
+        </div>
+    );
 };
 
-// Main page component
+
+// --- Main LiveQuiz Component ---
 const LiveQuiz = () => {
-  // State to manage which accordion is open
-  const [openQuestion, setOpenQuestion] = useState(null); // null, 1, 2, or 3
+    const { user } = useAuth(); // <-- Get the mock user
+    const [showAdminPanel, setShowAdminPanel] = useState(false); // State to show/hide modal
 
-  // State for each question's code and language
-  const [q1Code, setQ1Code] = useState('');
-  const [q1Lang, setQ1Lang] = useState('javascript');
+    const [selectedWeek, setSelectedWeek] = useState(Object.keys(allQuestions)[0]);
+    const [openQuestionId, setOpenQuestionId] = useState(null);
+    const [solutions, setSolutions] = useState({});
+    const [qnaMessages, setQnaMessages] = useState({}); 
+    const [error, setError] = useState('');
 
-  const [q2Code, setQ2Code] = useState('');
-  const [q2Lang, setQ2Lang] = useState('javascript');
+    const currentQuestions = allQuestions[selectedWeek] || [];
 
-  const [q3Code, setQ3Code] = useState('');
-  const [q3Lang, setQ3Lang] = useState('javascript');
-
-  // State for submission error
-  const [error, setError] = useState('');
-
-  const handleToggle = (index) => {
-    if (openQuestion === index) {
-      setOpenQuestion(null); // Close it if it's already open
-    } else {
-      setOpenQuestion(index); // Open the clicked one
-    }
-  };
-
-  const handleSubmit = () => {
-    // **MANDATORY CHECK for Question 3**
-    if (q3Code.trim() === '') {
-      setError('Error: Question 3 is mandatory and cannot be empty. Your submission was not recorded.');
-      setOpenQuestion(3); // Automatically open the Q3 accordion
-      return;
-    }
-
-    // Clear any previous errors
-    setError('');
-
-    // --- Database Submission Logic (for later) ---
-    // Here you would send the data to your backend
-    const submissionData = {
-      question1: { language: q1Lang, code: q1Code },
-      question2: { language: q2Lang, code: q2Code },
-      question3: { language: q3Lang, code: q3Code },
-      submittedAt: new Date().toISOString(),
+    const handleSolutionChange = (questionId, newSolution) => {
+        setSolutions(prev => ({ ...prev, [questionId]: newSolution, }));
+    };
+    
+    const handleQnaChange = (questionId, newQna) => {
+        setQnaMessages(prev => ({ ...prev, [questionId]: newQna, }));
     };
 
-    console.log('Submitting to database:', submissionData);
-    alert('Submission Successful!\n(Check the console for data)');
-    // --- End of DB Logic ---
-  };
+    const handleToggle = (questionId) => {
+        setOpenQuestionId(prev => (prev === questionId ? null : questionId));
+    };
 
-  return (
-    <div className="quiz-page-container">
-      <div className="quiz-content">
-        <h1 className="quiz-title">Live Coding Competition</h1>
-        <p className="quiz-subtitle">
-          Welcome! You can attempt questions in any order, but Question 3 is mandatory for submission.
-        </p>
+    const handleSubmit = () => {
+        const masterQuestion = currentQuestions.find(q => q.isMaster);
+        const masterSolution = solutions[masterQuestion.id]?.code || '';
 
-        {error && <div className="quiz-error-message">{error}</div>}
+        if (!masterQuestion || masterSolution.trim() === '') {
+            setError('Error: The mandatory question for this week must be answered. Your submission was not recorded.');
+            setOpenQuestionId(masterQuestion.id);
+            return;
+        }
 
-        {/* Question 1 */}
-        <QuestionAccordion
-          title="Question 1: FizzBuzz"
-          prompt="Write a program that prints the numbers from 1 to 100. But for multiples of three print 'Fizz' instead of the number and for the multiples of five print 'Buzz'. For numbers which are multiples of both three and five print 'FizzBuzz'."
-          code={q1Code}
-          setCode={setQ1Code}
-          lang={q1Lang}
-          setLang={setQ1Lang}
-          isOpen={openQuestion === 1}
-          onClick={() => handleToggle(1)}
-        />
+        setError('');
+        const submissionData = { 
+            week: selectedWeek,
+            solutions: currentQuestions.map(q => ({
+                questionId: q.id,
+                title: q.title,
+                language: solutions[q.id]?.lang || 'javascript',
+                code: solutions[q.id]?.code || '',
+                qna: qnaMessages[q.id] || ''
+            })),
+            submittedAt: new Date().toISOString(),
+        };
+        console.log('Submitting to database:', submissionData);
+        alert('Submission Successful!\n(Check the console for the submitted data)');
+    };
 
-        {/* Question 2 */}
-        <QuestionAccordion
-          title="Question 2: Palindrome Check"
-          prompt="Given a string, write a function to determine if it is a palindrome. A palindrome is a word, phrase, number, or other sequence of characters that reads the same backward as forward."
-          code={q2Code}
-          setCode={setQ2Code}
-          lang={q2Lang}
-          setLang={setQ2Lang}
-          isOpen={openQuestion === 2}
-          onClick={() => handleToggle(2)}
-        />
+    return (
+        <div className="quiz-page-container">
+            <div className="quiz-content">
+                
+                {/* --- NEW: Show Admin Panel modal if true --- */}
+                {showAdminPanel && (
+                    <AdminPanel 
+                        pageType="Quiz" 
+                        onClose={() => setShowAdminPanel(false)} 
+                    />
+                )}
 
-        {/* Question 3 (Master Question) */}
-        <QuestionAccordion
-          title="Question 3: Two Sum"
-          prompt="Given an array of integers 'nums' and an integer 'target', return indices of the two numbers such that they add up to 'target'. You may assume that each input would have exactly one solution, and you may not use the same element twice."
-          code={q3Code}
-          setCode={setQ3Code}
-          lang={q3Lang}
-          setLang={setQ3Lang}
-          isOpen={openQuestion === 3}
-          onClick={() => handleToggle(3)}
-          isMaster={true}
-        />
+                <div className="quiz-header-controls">
+                    <Link to="/" className="back-link">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                        <span>Back</span>
+                    </Link>
 
-        <button className="submit-quiz-button" onClick={handleSubmit}>
-          Submit Final Answers
-        </button>
-      </div>
-    </div>
-  );
+                    {/* --- NEW: Show "Add Week" button ONLY if user is admin --- */}
+                    {user && user.role === 'admin' && (
+                        <button 
+                            className="admin-add-week-btn" 
+                            onClick={() => setShowAdminPanel(true)}
+                        >
+                            + Add New Week
+                        </button>
+                    )}
+                </div>
+
+                <h1 className="quiz-title">Live Coding Competition</h1>
+                
+                <nav className="week-nav">
+                    {Object.keys(allQuestions).map(week => (
+                        <button
+                            key={week}
+                            className={`week-nav-button ${selectedWeek === week ? 'active' : ''}`}
+                            onClick={() => {
+                                setSelectedWeek(week);
+                                setOpenQuestionId(null); 
+                                setError(''); 
+                            }}
+                        >
+                            Week {week}
+                        </button>
+                    ))}
+                </nav>
+
+                <p className="quiz-subtitle">
+                    Select a week to view questions. The final question of each week is mandatory for submission.
+                </p>
+
+                {error && <div className="quiz-error-message">{error}</div>}
+
+                {currentQuestions.map(question => {
+                    const solution = solutions[question.id] || { code: '', lang: 'javascript' };
+                    const qna = qnaMessages[question.id] || '';
+                    return (
+                        <QuestionAccordion
+                            key={question.id}
+                            question={question}
+                            solution={solution}
+                            onSolutionChange={handleSolutionChange}
+                            qna={qna}
+                            onQnaChange={handleQnaChange}
+                            isOpen={openQuestionId === question.id}
+                            onClick={() => handleToggle(question.id)}
+                        />
+                    );
+})}
+
+                <button className="submit-quiz-button" onClick={handleSubmit}>
+                    Submit Week {selectedWeek} Answers
+                </button>
+            </div>
+        </div>
+    );
 };
 
 export default LiveQuiz;

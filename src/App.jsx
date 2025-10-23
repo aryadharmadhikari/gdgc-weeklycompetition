@@ -1,6 +1,8 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Landing from './pages/Landing';
+
+import { AuthProvider } from './Admin/AuthContext';
 import { loadGoogleFonts, gdgTheme } from './theme/gdgctheme';
 import LiveQuiz from './pages/LiveQuiz';
 import Explanations from './pages/Explanations';
@@ -12,6 +14,7 @@ function App() {
     }, []);
 
     return (
+        <AuthProvider>
         <div
             className="App"
             style={{
@@ -33,6 +36,7 @@ function App() {
                 </Routes>
             </Router>
         </div>
+        </AuthProvider>
     );
 }
 

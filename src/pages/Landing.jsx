@@ -1,15 +1,15 @@
 import React from 'react';
 import Header from '../components/layout/Header';
 import Hero from '../components/common/Hero';
+import Footer from '../components/layout/Footer'; // Add this
 
 const Landing = () => {
     return (
-        <div style={{ minHeight: '100vh' }}>
+        <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
             <Header />
             <Hero />
 
-            {/* Additional sections will go here later */}
-            <main style={{ padding: '2rem' }}>
+            <main style={{ padding: '2rem', flex: 1 }}>
                 <div style={{
                     maxWidth: '1200px',
                     margin: '0 auto',
@@ -34,6 +34,8 @@ const Landing = () => {
                     </p>
                 </div>
             </main>
+
+            <Footer /> {/* Add this */}
         </div>
     );
 };

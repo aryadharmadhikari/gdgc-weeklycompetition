@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { gdgTheme } from '../../theme/gdgctheme';
 import gdgLogo from '../../assets/images/light_gdgdbit_logo.jpg';
-import { useAuth } from '../../hooks/useAuth';
+import { authContext } from '../../contexts/AuthContext.jsx';
 
 const Header = () => {
-    const { user, isAuthenticated, signIn, signOut } = useAuth();
+    const { user, isAuthenticated, signIn, signOut } = authContext();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [showDropdown, setShowDropdown] = useState(false);

@@ -2,10 +2,9 @@ import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Landing from './pages/Landing';
 import Leaderboard from './pages/Leaderboard';
-import { AuthProvider } from './hooks/useAuth';
 import { loadGoogleFonts, gdgTheme } from './theme/gdgctheme';
 import LiveQuiz from "./pages/LiveQuiz";
-import { AuthProvider } from './Admin/AuthContext';
+import { AuthProvider } from './contexts/AuthContext';
 import Explanations from './pages/Explanations';
 
 function App() {

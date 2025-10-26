@@ -3,10 +3,10 @@ import { gdgTheme } from '../../theme/gdgctheme';
 import GoogleBrandLines from './GoogleBrandLines';
 import GoogleOrbs from './GoogleOrbs';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../../hooks/useAuth';
+import { authContext } from '../../contexts/AuthContext.jsx';
 
 const Hero = () => {
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated } = authContext();
 
     return (
         <>

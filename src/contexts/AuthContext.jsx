@@ -14,16 +14,19 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    // Unified sign-in with role support
-    const signIn = async (email, password, role = 'user') => {
+    // 🎯 CHANGE THIS TO SWITCH BETWEEN USER/ADMIN
+    const MOCK_USER_ROLE = 'user';  // Change to 'admin' to test admin features
+
+    // Simple sign-in (no parameters needed for mock)
+    const signIn = async () => {
         try {
-            // Mock sign-in logic - replace with Firebase
+            // Mock sign-in with your details
             const mockUser = {
                 uid: 'mock-user-123',
-                displayName: email.split('@')[0],
-                email: email,
+                displayName: 'Arya Dharmadhikari',
+                email: 'arya.dharmadhikari@dbit.in',
                 photoURL: 'https://via.placeholder.com/150',
-                role: role // Add role here
+                role: MOCK_USER_ROLE  // Uses the role set above
             };
 
             // Simulate API delay
@@ -36,15 +39,6 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    // Convenience methods for admin/user login
-    const loginAsAdmin = () => {
-        return signIn('admin@example.com', 'password', 'admin');
-    };
-
-    const loginAsUser = () => {
-        return signIn('user@example.com', 'password', 'user');
-    };
-
     const signOut = async () => {
         try {
             await new Promise(resolve => setTimeout(resolve, 500));
@@ -55,6 +49,7 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    // Mock user persistence
     useEffect(() => {
         const checkAuth = async () => {
             setLoading(false);
@@ -67,8 +62,6 @@ export const AuthProvider = ({ children }) => {
         loading,
         signIn,
         signOut,
-        loginAsAdmin,
-        loginAsUser,
         isAuthenticated: !!user
     };
 

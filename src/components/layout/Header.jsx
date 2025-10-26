@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { gdgTheme } from '../../theme/gdgctheme';
 import gdgLogo from '../../assets/images/light_gdgdbit_logo.jpg';
-import { authContext } from '../../contexts/AuthContext.jsx';
+import { useAuth } from '../../contexts/AuthContext.jsx';
 
 const Header = () => {
-    const { user, isAuthenticated, signIn, signOut } = authContext();
+    const { user, isAuthenticated, signIn, signOut } = useAuth();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [showDropdown, setShowDropdown] = useState(false);
@@ -83,7 +83,7 @@ const Header = () => {
                     {/* Navigation */}
                     <nav style={{ display: 'flex', gap: gdgTheme.spacing.lg, alignItems: 'center' }}>
                         {/* Navigation Links - Removed Events */}
-                        {['Home', 'Leaderboard'].map((item) => {
+                        {['Home', 'Leaderboard', 'Explanations'].map((item) => {
                             if (item === 'Home') {
                                 return (
                                     <Link
@@ -112,6 +112,29 @@ const Header = () => {
                                     <Link
                                         key={item}
                                         to="/leaderboard"
+                                        style={{
+                                            color: gdgTheme.colors.text.primary,
+                                            textDecoration: 'none',
+                                            ...gdgTheme.typography.styles.navLink,
+                                            padding: `${gdgTheme.spacing.sm} ${gdgTheme.spacing.md}`,
+                                            borderRadius: gdgTheme.borderRadius.medium,
+                                            transition: 'background-color 0.2s ease'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.target.style.backgroundColor = gdgTheme.colors.background.secondary;
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.target.style.backgroundColor = 'transparent';
+                                        }}
+                                    >
+                                        {item}
+                                    </Link>
+                                );
+                            } else if (item === 'Explanations') {
+                                return (
+                                    <Link
+                                        key={item}
+                                        to="/explanations"
                                         style={{
                                             color: gdgTheme.colors.text.primary,
                                             textDecoration: 'none',

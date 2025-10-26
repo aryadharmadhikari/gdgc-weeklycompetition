@@ -1,12 +1,11 @@
 import { useState, useEffect, useContext, createContext } from 'react';
 
-// Create Auth Context
 const AuthContext = createContext();
 
-export const useAuth = () => {
+export const authContext = () => {
     const context = useContext(AuthContext);
     if (!context) {
-        throw new Error('useAuth must be used within an AuthProvider');
+        throw new Error('authContext must be used within an AuthProvider');
     }
     return context;
 };
@@ -15,15 +14,16 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    // Mock authentication functions (replace with real Firebase later)
-    const signIn = async () => {
+    // Unified sign-in with role support
+    const signIn = async (email, password, role = 'user') => {
         try {
             // Mock sign-in logic - replace with Firebase
             const mockUser = {
                 uid: 'mock-user-123',
-                displayName: 'Arya Dharmadhikari',
-                email: 'sum-rndm-nga@dbit.in',
-                photoURL: 'https://via.placeholder.com/150'
+                displayName: email.split('@')[0],
+                email: email,
+                photoURL: 'https://via.placeholder.com/150',
+                role: role // Add role here
             };
 
             // Simulate API delay
@@ -36,9 +36,17 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    // Convenience methods for admin/user login
+    const loginAsAdmin = () => {
+        return signIn('admin@example.com', 'password', 'admin');
+    };
+
+    const loginAsUser = () => {
+        return signIn('user@example.com', 'password', 'user');
+    };
+
     const signOut = async () => {
         try {
-            // Simulate API delay
             await new Promise(resolve => setTimeout(resolve, 500));
             setUser(null);
             return { success: true };
@@ -47,13 +55,10 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    // Mock user persistence (replace with Firebase onAuthStateChanged)
     useEffect(() => {
-        // Mock checking for existing session
         const checkAuth = async () => {
             setLoading(false);
         };
-
         checkAuth();
     }, []);
 
@@ -62,6 +67,8 @@ export const AuthProvider = ({ children }) => {
         loading,
         signIn,
         signOut,
+        loginAsAdmin,
+        loginAsUser,
         isAuthenticated: !!user
     };
 

@@ -1,16 +1,45 @@
-# React + Vite
+# 🚀 GDGC DBIT - DSA Bootcamp Portal
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Welcome to the official frontend repository for the **GDGC DBIT December DSA Bootcamp**.
 
-Currently, two official plugins are available:
+This web portal serves as the central platform for DBIT students to participate in the bootcamp. It provides access to weekly code explanations, live coding competitions, and a real-time leaderboard to track progress.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+> **⚠️ Access Restriction:** This platform is exclusively for **DBIT Students**. The application utilizes Google OAuth 2.0 to verify that users are signing in with a valid `@dbit.in` email address.
 
-## React Compiler
+---
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 🌟 Key Features
 
-## Expanding the ESLint configuration
+* **🔐 Institutional Login:** Secure authentication ensuring only verified DBIT students can access the dashboard.
+* **🏆 Live Leaderboard:** A dynamic ranking system that displays contestants sorted by the points scored through their code submissions.
+* **⚔️ Live Coding Competition:** A real-time interface displaying active problem statements for the ongoing competition.
+* **📚 Explanation Hub:** A dedicated section where code breakdowns and logic for weekly DSA topics are displayed.
+* **🔗 GDGC Integration:** Quick access to the main GDGC website and upcoming events.
+* **⚡ High Performance:** Built using **React + Vite** for a fast, responsive, and modern user experience.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+---
+
+## 🛠️ Tech Stack
+
+* **Frontend Library:** [React.js](https://reactjs.org/)
+* **Build Tool:** [Vite](https://vitejs.dev/)
+* **Authentication:** Firebase Auth (Google OAuth 2.0)
+* **Styling:** CSS
+
+---
+
+## ⚙️ How to Replicate (Installation Steps)
+
+If you want to contribute or run this project locally, follow these steps:
+
+### 1. Prerequisites
+Ensure you have the following installed:
+* **Node.js** (v16+ recommended)
+* **npm** (comes with Node) or **yarn**
+
+### 2. Clone the Repository
+Open your terminal and clone the project:
+
+```bash
+git clone [https://github.com/your-username/gdgc-weeklycompetition.git](https://github.com/your-username/gdgc-weeklycompetition.git)
+cd gdgc-weeklycompetition

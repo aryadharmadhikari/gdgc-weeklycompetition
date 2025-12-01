@@ -41,5 +41,16 @@ Ensure you have the following installed:
 Open your terminal and clone the project:
 
 ```bash
-git clone [https://github.com/your-username/gdgc-weeklycompetition.git](https://github.com/your-username/gdgc-weeklycompetition.git)
+git clone https://github.com/your-username/gdgc-weeklycompetition.git
 cd gdgc-weeklycompetition
+```
+### 3. Install Dependencies
+Install the required packages:
+```bash
+npm install
+```
+### 4. Run the Application
+Start the development server:
+```bash
+npm run dev
+```

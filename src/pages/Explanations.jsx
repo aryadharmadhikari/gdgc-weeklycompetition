@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import './LiveQuiz.css';
 import { useAuth } from '../contexts/AuthContext';
 import AdminPanel from '../Admin/AdminPanel';
+import Header from '../components/layout/Header';
+import Footer from '../components/layout/Footer';
 
 // Keep all your existing data structure exactly as it is
 const allExplanations = {
@@ -96,6 +98,7 @@ const ExplanationAccordion = ({ question, isOpen, onClick }) => {
 };
 
 const Explanations = () => {
+    
     const { user } = useAuth(); // ✅ This will now work with the updated import
     const [showAdminPanel, setShowAdminPanel] = useState(false);
     const [selectedWeek, setSelectedWeek] = useState(Object.keys(allExplanations)[0]);
@@ -108,6 +111,8 @@ const Explanations = () => {
     };
 
     return (
+        <>
+        <Header />
         <div className="quiz-page-container">
             <div className="quiz-content">
 
@@ -166,7 +171,11 @@ const Explanations = () => {
                     />
                 ))}
             </div>
+        
         </div>
+        <Footer />
+        </>
+        
     );
 };
 

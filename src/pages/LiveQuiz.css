@@ -1,6 +1,3 @@
-/* src/pages/LiveQuiz.css */
-
-/* --- Import Google Font (Roboto) --- */
 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
 
 /* --- Google Color Palette --- */
@@ -9,15 +6,34 @@
   --google-red: #db4437;
   --google-yellow: #f4b400;
   --google-green: #0f9d58;
+
   --google-text-dark: #3c4043;
   --google-text-light: #5f6368;
   --google-bg-grey: #f8f9fa;
   --google-border-grey: #dadce0;
+
+  --futuristic-bg-start: #f5f7fa;
+  --futuristic-bg-end: #e8f0fe; /* Light blue tint */
+}
+
+/* --- Keyframe Animations --- */
+@keyframes pulse-glow {
+  0% {
+    box-shadow: 0 0 5px rgba(66, 133, 244, 0.5), 0 0 10px rgba(66, 133, 244, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(66, 133, 244, 0.8), 0 0 25px rgba(66, 133, 244, 0.5);
+  }
+  100% {
+    box-shadow: 0 0 5px rgba(66, 133, 244, 0.5), 0 0 10px rgba(66, 133, 244, 0.3);
+  }
 }
 
 body {
   font-family: 'Roboto', 'Arial', sans-serif;
-  background-color: var(--google-bg-grey);
+  /* Subtle futuristic gradient background */
+  background: linear-gradient(135deg, var(--futuristic-bg-start) 0%, var(--futuristic-bg-end) 100%);
+  background-attachment: fixed;
 }
 
 .quiz-page-container {
@@ -35,6 +51,9 @@ body {
 
 /* --- Back Link and Header Controls --- */
 .quiz-header-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 1rem;
 }
 
@@ -47,31 +66,46 @@ body {
   font-size: 1rem;
   font-weight: 500;
   padding: 8px 12px;
-  border-radius: 8px;
-  transition: background-color 0.2s ease-in-out;
+  border-radius: 20px; /* More rounded */
+  transition: all 0.3s ease;
 }
 
 .back-link:hover {
-  background-color: #e8f0fe;
+  background-color: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
 }
 
 .back-link svg {
-  color: var(--google-blue);
+  transition: transform 0.2s ease;
+}
+.back-link:hover svg {
+  transform: translateX(-3px);
 }
 
+/* --- COLORFUL GRADIENT TITLE --- */
 .quiz-title {
-  font-size: 2.5rem;
+  font-size: 2.8rem;
   font-weight: 700;
-  color: var(--google-blue);
   text-align: center;
-  margin: 0 0 1rem 0;
+  margin: 0 0 0.5rem 0;
+  /* Gradient Text */
+  background: linear-gradient(90deg, 
+    var(--google-blue) 0%, 
+    var(--google-green) 33%, 
+    var(--google-yellow) 66%, 
+    var(--google-red) 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-fill-color: transparent;
 }
 
 .quiz-subtitle {
   font-size: 1.1rem;
   color: var(--google-text-light);
   text-align: center;
-  margin-bottom: 2rem;
+  margin-bottom: 2.5rem;
   margin-top: 0.5rem;
 }
 
@@ -79,18 +113,18 @@ body {
 .week-nav {
   display: flex;
   justify-content: center;
+  flex-wrap: wrap; /* Allow wrapping on small screens */
   gap: 1rem;
-  margin-bottom: 2rem;
-  border-bottom: 1px solid var(--google-border-grey);
-  padding-bottom: 1rem;
+  margin-bottom: 2.5rem;
+  border: none; /* Removed border for a cleaner look */
 }
 
 .week-nav-button {
-  padding: 0.6rem 1.2rem;
+  padding: 0.7rem 1.4rem;
   font-size: 1rem;
   font-weight: 500;
   border: 1px solid var(--google-border-grey);
-  border-radius: 20px;
+  border-radius: 25px; /* Pill shape */
   background-color: #fff;
   color: var(--google-text-light);
   cursor: pointer;
@@ -98,33 +132,43 @@ body {
 }
 
 .week-nav-button:hover {
-  background-color: #f1f3f4;
-  border-color: #cdd1d5;
+  background-color: #fff;
+  border-color: var(--google-text-dark);
+  color: var(--google-text-dark);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
 
 .week-nav-button.active {
-  background-color: var(--google-blue);
+  background: linear-gradient(135deg, var(--google-blue), #3168d6);
   color: #fff;
   border-color: var(--google-blue);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  /* Pulsing Glow Animation */
+  animation: pulse-glow 2s infinite;
 }
 
 
-/* --- Question Card / Accordion --- */
+/* --- COLORFUL Question Card / Accordion --- */
 .question-card {
   background-color: #ffffff;
   border: 1px solid var(--google-border-grey);
-  border-radius: 8px;
-  margin-bottom: 1.25rem;
-  box-shadow: 0 1px 2px 0 rgba(60, 64, 67, 0.3),
-    0 1px 3px 1px rgba(60, 64, 67, 0.15);
+  border-radius: 12px; /* More rounded */
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 4px rgba(60, 64, 67, 0.1);
   overflow: hidden;
-  transition: box-shadow 0.3s ease;
+  transition: all 0.3s ease;
+  /* COLORFUL BORDER */
+  border-left-width: 5px; 
 }
 
+/* Cycle through Google colors for the border */
+.question-card:nth-child(4n+1) { border-left-color: var(--google-blue); }
+.question-card:nth-child(4n+2) { border-left-color: var(--google-red); }
+.question-card:nth-child(4n+3) { border-left-color: var(--google-yellow); }
+.question-card:nth-child(4n+4) { border-left-color: var(--google-green); }
+
 .question-card:hover {
-  box-shadow: 0 1px 3px 0 rgba(60, 64, 67, 0.3),
-    0 4px 8px 3px rgba(60, 64, 67, 0.15);
+  box-shadow: 0 4px 15px rgba(60, 64, 67, 0.15);
+  transform: translateY(-2px);
 }
 
 .question-header {
@@ -146,12 +190,22 @@ body {
 .accordion-icon {
   font-size: 1.5rem;
   font-weight: 700;
-  color: var(--google-blue);
+  transition: transform 0.2s ease;
+  /* Match the border color */
+  color: var(--google-text-light); 
+}
+.question-card:nth-child(4n+1) .accordion-icon { color: var(--google-blue); }
+.question-card:nth-child(4n+2) .accordion-icon { color: var(--google-red); }
+.question-card:nth-child(4n+3) .accordion-icon { color: var(--google-yellow); }
+.question-card:nth-child(4n+4) .accordion-icon { color: var(--google-green); }
+
+.question-card[aria-expanded="true"] .accordion-icon {
+  transform: rotate(45deg);
 }
 
 .question-body {
   padding: 0 1.5rem 1.5rem 1.5rem;
-  border-top: 1px solid var(--google-border-grey);
+  border-top: 1px solid #e8eaed; /* Lighter divider */
 }
 
 .question-prompt {
@@ -161,33 +215,40 @@ body {
   margin-bottom: 1.5rem;
 }
 
-.master-question .question-header {
-  background-color: #fef7e0;
+.master-question.question-card {
+  /* Softer gradient for master question */
+  background: linear-gradient(90deg, #fff, #fef9e7);
+  border-left-color: var(--google-yellow);
 }
 
 .master-tag {
-  color: var(--google-red);
+  color: #c58900;
+  background-color: #fef3d9;
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   margin-left: 0.5rem;
+  padding: 3px 8px;
+  border-radius: 10px;
   vertical-align: middle;
 }
 
 /* --- Code Editor --- */
 .editor-wrapper {
   border: 1px solid var(--google-border-grey);
-  border-radius: 8px;
+  border-radius: 12px;
   overflow: hidden;
   margin-top: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 
 .editor-toolbar {
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  padding: 0.5rem 1rem;
+  padding: 0.75rem 1rem;
   background-color: #f1f3f4;
   gap: 0.5rem;
+  border-bottom: 1px solid var(--google-border-grey);
 }
 
 .editor-toolbar label {
@@ -196,11 +257,15 @@ body {
 }
 
 .lang-select {
-  padding: 0.25rem 0.5rem;
+  padding: 0.35rem 0.6rem;
   border: 1px solid var(--google-border-grey);
-  border-radius: 4px;
+  border-radius: 8px;
   font-family: 'Roboto', sans-serif;
   font-size: 0.9rem;
+  background-color: #fff;
+}
+.lang-select:focus {
+  outline: 2px solid var(--google-blue);
 }
 
 .code-editor {
@@ -210,7 +275,7 @@ body {
   padding: 1rem;
   font-family: 'Courier New', Courier, monospace;
   font-size: 0.95rem;
-  line-height: 1.5;
+  line-height: 1.6;
   background-color: #282c34;
   color: #f8f8f2;
   resize: vertical;
@@ -218,48 +283,52 @@ body {
 }
 
 .code-editor:focus {
-  outline: 2px solid var(--google-blue);
+  outline: none;
 }
 
-/* --- Submit Button --- */
+/* --- GRADIENT Submit Button --- */
 .submit-quiz-button {
   display: block;
   width: 100%;
-  padding: 0.8rem 1rem;
+  padding: 1rem 1rem;
   font-size: 1.1rem;
   font-weight: 700;
   color: #ffffff;
-  background-color: var(--google-green);
+  /* New Gradient */
+  background: linear-gradient(135deg, var(--google-blue) 0%, var(--google-green) 100%);
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
   cursor: pointer;
-  margin-top: 1rem;
-  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+  margin-top: 2rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px -5px rgba(66, 133, 244, 0.4);
 }
 
 .submit-quiz-button:hover {
-  background-color: #0c804a;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px -5px rgba(66, 133, 244, 0.6);
 }
 
 /* --- Error Message --- */
 .quiz-error-message {
   padding: 1rem;
-  background-color: #fbe9e7;
+  background: linear-gradient(90deg, #fbe9e7, #fce1de);
   color: var(--google-red);
   border: 1px solid var(--google-red);
+  border-left-width: 5px;
   border-radius: 8px;
   margin-bottom: 1.5rem;
   text-align: center;
   font-weight: 500;
+  box-shadow: 0 2px 5px rgba(219, 68, 55, 0.1);
 }
 
-/* --- NEW: Test Case Viewer Styles --- */
+/* --- Test Case Viewer Styles --- */
 .test-cases-wrapper {
   border: 1px solid var(--google-border-grey);
-  border-radius: 8px;
+  border-radius: 12px;
   margin-bottom: 1.5rem;
-  background-color: #f8f9fa; /* Light grey background */
+  background-color: #f8f9fa;
   overflow: hidden;
 }
 
@@ -274,8 +343,8 @@ body {
 
 .test-cases-content {
   padding: 0.5rem 1.2rem 1.2rem 1.2rem;
-  background-color: #282c34; /* Dark background like LeetCode */
-  color: #f8f8f2; /* Light text */
+  background-color: #282c34;
+  color: #f8f8f2;
   max-height: 200px;
   overflow-y: auto;
 }
@@ -283,17 +352,17 @@ body {
 .test-case {
   font-family: 'Courier New', Courier, monospace;
   font-size: 0.9rem;
-  white-space: pre-wrap; /* Allows line breaks */
+  white-space: pre-wrap;
   margin: 0;
   padding: 0.8rem 0;
-  border-bottom: 1px dashed #5f6368; /* Separator for cases */
+  border-bottom: 1px dashed #5f6368;
 }
 
 .test-case:last-child {
   border-bottom: none;
 }
 
-/* --- NEW: Q&A Textbox Styles --- */
+/* --- Q&A Textbox Styles --- */
 .qna-wrapper {
   margin-top: 2rem;
 }
@@ -315,7 +384,7 @@ body {
   width: 100%;
   min-height: 120px;
   border: 1px solid var(--google-border-grey);
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 1rem;
   font-family: 'Roboto', sans-serif;
   font-size: 0.95rem;
@@ -324,37 +393,54 @@ body {
   color: var(--google-text-dark);
   resize: vertical;
   box-sizing: border-box;
+  transition: all 0.2s ease;
 }
 
 .qna-textarea:focus {
   outline: 2px solid var(--google-blue);
   border-color: var(--google-blue);
-}
-/* ADD THESE STYLES TO THE END of your existing src/pages/LiveQuiz.css file
-*/
-
-.quiz-header-controls {
-  display: flex;
-  justify-content: space-between; /* This will push back-link and admin-btn apart */
-  align-items: center;
-  margin-bottom: 1rem;
+  box-shadow: 0 0 10px rgba(66, 133, 244, 0.15);
 }
 
+/* --- GRADIENT Admin Button --- */
 .admin-add-week-btn {
-  background-color: var(--google-blue); /* Using your theme's blue */
+  /* New Gradient */
+  background: linear-gradient(135deg, var(--google-red) 0%, var(--google-yellow) 100%);
   color: #fff;
   border: none;
-  border-radius: 8px;
-  padding: 0.6rem 1rem;
+  border-radius: 20px; /* More rounded */
+  padding: 0.7rem 1.2rem;
   font-size: 0.9rem;
   font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px -5px rgba(219, 68, 55, 0.4);
 }
 
 .admin-add-week-btn:hover {
-  background-color: #3367d6; /* A slightly darker blue */
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px -5px rgba(219, 68, 55, 0.6);
 }
 
+/* --- Explanation Page Specific --- */
+.explanation-wrapper {
+  margin-top: 2rem;
+  background-color: #f8f9fa;
+  border: 1px solid var(--google-border-grey);
+  border-radius: 12px;
+  padding: 1.2rem 1.5rem;
+}
 
+.explanation-title {
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: var(--google-text-dark);
+  margin: 0 0 0.5rem 0;
+}
+
+.explanation-text {
+  font-size: 1rem;
+  color: var(--google-text-light);
+  line-height: 1.7;
+  margin: 0;
+}

@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom';
 import './LiveQuiz.css';
 import { useAuth } from '../contexts/AuthContext';  // <-- IMPORT MOCK AUTH
 import AdminPanel from '../Admin/AdminPanel'; // <-- IMPORT ADMIN MODAL
+import Header from '../components/layout/Header';
+import Footer from '../components/layout/Footer';
+
 
 // --- Mock Database of Questions (from your file) ---
 const allQuestions = {
@@ -173,6 +176,8 @@ const LiveQuiz = () => {
     };
 
     return (
+        <>
+         <Header />
         <div className="quiz-page-container">
             <div className="quiz-content">
                 
@@ -249,6 +254,8 @@ const LiveQuiz = () => {
                 </button>
             </div>
         </div>
+        <Footer />
+        </>
     );
 };
 

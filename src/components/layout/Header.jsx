@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { gdgTheme } from '../../theme/gdgctheme';
 import gdgLogo from '../../assets/images/light_gdgdbit_logo.jpg';
+// TODO: Import your mobile specific logo here
+// import gdgLogoMobile from '../../assets/images/gdg_logo_icon.png';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 
 const Header = () => {
@@ -9,7 +11,24 @@ const Header = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [showDropdown, setShowDropdown] = useState(false);
+
+    // Responsive States
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
     const navigate = useNavigate();
+
+    // Monitor Screen Size
+    useEffect(() => {
+        const handleResize = () => {
+            setIsMobile(window.innerWidth < 768);
+            if (window.innerWidth >= 768) {
+                setIsMobileMenuOpen(false); // Close mobile menu if switching to desktop
+            }
+        };
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     const handleSignIn = async () => {
         try {
@@ -29,6 +48,7 @@ const Header = () => {
             setLoading(true);
             await signOut();
             setShowDropdown(false);
+            setIsMobileMenuOpen(false);
         } catch (error) {
             setError(error.message);
             setTimeout(() => setError(null), 3000);
@@ -45,15 +65,23 @@ const Header = () => {
             return;
         }
         navigate('/live-quiz');
+        setIsMobileMenuOpen(false);
     };
+
+    // Reusable Nav Links Array
+    const navLinks = [
+        { name: 'Home', path: '/' },
+        { name: 'Leaderboard', path: '/leaderboard' },
+        { name: 'Explanations', path: '/explanations' }
+    ];
 
     return (
         <>
             <header style={{
                 backgroundColor: gdgTheme.colors.background.primary,
                 color: gdgTheme.colors.text.primary,
-                padding: `${gdgTheme.spacing.sm} ${gdgTheme.spacing.xl}`,
-                position: 'static',
+                padding: isMobile ? `${gdgTheme.spacing.sm} ${gdgTheme.spacing.md}` : `${gdgTheme.spacing.sm} ${gdgTheme.spacing.xl}`,
+                position: 'sticky', // Changed to sticky for better mobile UX
                 top: 0,
                 zIndex: 1000,
                 boxShadow: gdgTheme.shadows.small
@@ -65,14 +93,15 @@ const Header = () => {
                     maxWidth: '1200px',
                     margin: '0 auto'
                 }}>
-                    {/* Logo links to the homepage */}
-                    <Link to="/" style={{ textDecoration: 'none' }}>
+                    {/* Logo Section */}
+                    <Link to="/" style={{ textDecoration: 'none' }} onClick={() => setIsMobileMenuOpen(false)}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: gdgTheme.spacing.md }}>
                             <img
+                                // Logic: Use specific mobile logo if on mobile, else desktop logo
                                 src={gdgLogo}
                                 alt="GDG Logo"
                                 style={{
-                                    height: '60px',
+                                    height: isMobile ? '40px' : '60px', // Smaller logo on mobile
                                     width: 'auto',
                                     objectFit: 'contain'
                                 }}
@@ -80,347 +109,254 @@ const Header = () => {
                         </div>
                     </Link>
 
-                    {/* Navigation */}
-                    <nav style={{ display: 'flex', gap: gdgTheme.spacing.lg, alignItems: 'center' }}>
-                        {/* Navigation Links - Removed Events */}
-                        {['Home', 'Leaderboard', 'Explanations'].map((item) => {
-                            if (item === 'Home') {
-                                return (
-                                    <Link
-                                        key={item}
-                                        to="/"
-                                        style={{
-                                            color: gdgTheme.colors.text.primary,
-                                            textDecoration: 'none',
-                                            ...gdgTheme.typography.styles.navLink,
-                                            padding: `${gdgTheme.spacing.sm} ${gdgTheme.spacing.md}`,
-                                            borderRadius: gdgTheme.borderRadius.medium,
-                                            transition: 'background-color 0.2s ease'
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            e.target.style.backgroundColor = gdgTheme.colors.background.secondary;
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.target.style.backgroundColor = 'transparent';
-                                        }}
-                                    >
-                                        {item}
-                                    </Link>
-                                );
-                            } else if (item === 'Leaderboard') {
-                                return (
-                                    <Link
-                                        key={item}
-                                        to="/leaderboard"
-                                        style={{
-                                            color: gdgTheme.colors.text.primary,
-                                            textDecoration: 'none',
-                                            ...gdgTheme.typography.styles.navLink,
-                                            padding: `${gdgTheme.spacing.sm} ${gdgTheme.spacing.md}`,
-                                            borderRadius: gdgTheme.borderRadius.medium,
-                                            transition: 'background-color 0.2s ease'
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            e.target.style.backgroundColor = gdgTheme.colors.background.secondary;
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.target.style.backgroundColor = 'transparent';
-                                        }}
-                                    >
-                                        {item}
-                                    </Link>
-                                );
-                            } else if (item === 'Explanations') {
-                                return (
-                                    <Link
-                                        key={item}
-                                        to="/explanations"
-                                        style={{
-                                            color: gdgTheme.colors.text.primary,
-                                            textDecoration: 'none',
-                                            ...gdgTheme.typography.styles.navLink,
-                                            padding: `${gdgTheme.spacing.sm} ${gdgTheme.spacing.md}`,
-                                            borderRadius: gdgTheme.borderRadius.medium,
-                                            transition: 'background-color 0.2s ease'
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            e.target.style.backgroundColor = gdgTheme.colors.background.secondary;
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.target.style.backgroundColor = 'transparent';
-                                        }}
-                                    >
-                                        {item}
-                                    </Link>
-                                );
-                            }
-                            return null;
-                        })}
+                    {/* DESKTOP NAVIGATION */}
+                    {!isMobile && (
+                        <nav style={{ display: 'flex', gap: gdgTheme.spacing.lg, alignItems: 'center' }}>
+                            {navLinks.map((item) => (
+                                <Link
+                                    key={item.name}
+                                    to={item.path}
+                                    style={{
+                                        color: gdgTheme.colors.text.primary,
+                                        textDecoration: 'none',
+                                        ...gdgTheme.typography.styles.navLink,
+                                        padding: `${gdgTheme.spacing.sm} ${gdgTheme.spacing.md}`,
+                                        borderRadius: gdgTheme.borderRadius.medium,
+                                        transition: 'background-color 0.2s ease'
+                                    }}
+                                    onMouseEnter={(e) => e.target.style.backgroundColor = gdgTheme.colors.background.secondary}
+                                    onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                                >
+                                    {item.name}
+                                </Link>
+                            ))}
 
-                        {/* Live Quiz Button - Protected */}
+                            <button
+                                onClick={handleLiveQuizClick}
+                                style={{
+                                    backgroundColor: gdgTheme.colors.primary.blue,
+                                    color: gdgTheme.colors.text.inverse,
+                                    border: 'none',
+                                    ...gdgTheme.typography.styles.button,
+                                    padding: `${gdgTheme.spacing.md} ${gdgTheme.spacing.md}`,
+                                    borderRadius: gdgTheme.borderRadius.medium,
+                                    cursor: 'pointer',
+                                    boxShadow: gdgTheme.shadows.button,
+                                }}
+                            >
+                                Live Competition
+                            </button>
+
+                            {/* Desktop Auth Button / User Menu */}
+                            {!isAuthenticated ? (
+                                <button
+                                    onClick={handleSignIn}
+                                    disabled={loading}
+                                    style={{
+                                        backgroundColor: loading ? gdgTheme.colors.neutral.gray : gdgTheme.colors.secondary.green,
+                                        color: gdgTheme.colors.text.inverse,
+                                        border: 'none',
+                                        ...gdgTheme.typography.styles.button,
+                                        padding: `${gdgTheme.spacing.md} ${gdgTheme.spacing.lg}`,
+                                        borderRadius: gdgTheme.borderRadius.medium,
+                                        cursor: loading ? 'not-allowed' : 'pointer',
+                                        display: 'flex', alignItems: 'center', gap: gdgTheme.spacing.sm
+                                    }}
+                                >
+                                    {loading ? 'Signing in...' : 'Sign In'}
+                                </button>
+                            ) : (
+                                <div style={{ position: 'relative' }}>
+                                    <button
+                                        onClick={() => setShowDropdown(!showDropdown)}
+                                        style={{
+                                            display: 'flex', alignItems: 'center', gap: gdgTheme.spacing.sm,
+                                            padding: `${gdgTheme.spacing.sm} ${gdgTheme.spacing.md}`,
+                                            backgroundColor: gdgTheme.colors.background.primary,
+                                            border: `1px solid ${gdgTheme.colors.neutral.lightGray}`,
+                                            borderRadius: gdgTheme.borderRadius.medium,
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        <div style={{
+                                            width: '32px', height: '32px', borderRadius: '50%',
+                                            backgroundColor: gdgTheme.colors.primary.blue,
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            color: 'white', fontWeight: 'bold'
+                                        }}>
+                                            {user?.displayName?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
+                                        </div>
+                                    </button>
+                                    {/* Desktop Dropdown */}
+                                    {showDropdown && (
+                                        <div style={{
+                                            position: 'absolute', top: '100%', right: 0, marginTop: '8px',
+                                            backgroundColor: gdgTheme.colors.background.primary,
+                                            border: `1px solid ${gdgTheme.colors.neutral.lightGray}`,
+                                            borderRadius: gdgTheme.borderRadius.medium,
+                                            boxShadow: gdgTheme.shadows.large,
+                                            minWidth: '200px', zIndex: 1000
+                                        }}>
+                                            <div style={{ padding: gdgTheme.spacing.md, borderBottom: `1px solid ${gdgTheme.colors.neutral.lightGray}` }}>
+                                                <div style={{ fontWeight: '500' }}>{user?.displayName}</div>
+                                                <div style={{ fontSize: '0.8rem', color: gdgTheme.colors.text.secondary }}>{user?.email}</div>
+                                            </div>
+                                            <button
+                                                onClick={handleSignOut}
+                                                style={{
+                                                    width: '100%', padding: gdgTheme.spacing.md,
+                                                    backgroundColor: 'transparent', border: 'none',
+                                                    color: gdgTheme.colors.accent.red, textAlign: 'left', cursor: 'pointer'
+                                                }}
+                                            >
+                                                Sign Out
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </nav>
+                    )}
+
+                    {/* MOBILE HAMBURGER ICON */}
+                    {isMobile && (
+                        <button
+                            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                            style={{
+                                background: 'transparent',
+                                border: 'none',
+                                cursor: 'pointer',
+                                padding: '5px'
+                            }}
+                        >
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill={gdgTheme.colors.text.primary}>
+                                {isMobileMenuOpen ? (
+                                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" /> // X icon
+                                ) : (
+                                    <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" /> // Hamburger icon
+                                )}
+                            </svg>
+                        </button>
+                    )}
+                </div>
+
+                {/* MOBILE MENU DROPDOWN */}
+                {isMobile && isMobileMenuOpen && (
+                    <div style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        right: 0,
+                        backgroundColor: gdgTheme.colors.background.primary,
+                        borderTop: `1px solid ${gdgTheme.colors.neutral.lightGray}`,
+                        boxShadow: gdgTheme.shadows.large,
+                        padding: gdgTheme.spacing.lg,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: gdgTheme.spacing.md,
+                        zIndex: 999
+                    }}>
+                        {/* Mobile User Info (if logged in) */}
+                        {isAuthenticated && (
+                            <div style={{
+                                display: 'flex', alignItems: 'center', gap: gdgTheme.spacing.sm,
+                                paddingBottom: gdgTheme.spacing.md,
+                                borderBottom: `1px solid ${gdgTheme.colors.neutral.lightGray}`
+                            }}>
+                                <div style={{
+                                    width: '32px', height: '32px', borderRadius: '50%',
+                                    backgroundColor: gdgTheme.colors.primary.blue,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    color: 'white', fontWeight: 'bold'
+                                }}>
+                                    {user?.displayName?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
+                                </div>
+                                <div style={{ overflow: 'hidden' }}>
+                                    <div style={{ fontWeight: '500' }}>{user?.displayName}</div>
+                                    <div style={{ fontSize: '0.8rem', color: gdgTheme.colors.text.secondary }}>{user?.email}</div>
+                                </div>
+                            </div>
+                        )}
+
+                        {navLinks.map((item) => (
+                            <Link
+                                key={item.name}
+                                to={item.path}
+                                onClick={() => setIsMobileMenuOpen(false)}
+                                style={{
+                                    color: gdgTheme.colors.text.primary,
+                                    textDecoration: 'none',
+                                    fontSize: '1.1rem',
+                                    padding: gdgTheme.spacing.sm
+                                }}
+                            >
+                                {item.name}
+                            </Link>
+                        ))}
+
                         <button
                             onClick={handleLiveQuizClick}
                             style={{
                                 backgroundColor: gdgTheme.colors.primary.blue,
                                 color: gdgTheme.colors.text.inverse,
                                 border: 'none',
-                                ...gdgTheme.typography.styles.button,
-                                padding: `${gdgTheme.spacing.md} ${gdgTheme.spacing.md}`,
+                                padding: gdgTheme.spacing.md,
                                 borderRadius: gdgTheme.borderRadius.medium,
                                 cursor: 'pointer',
-                                boxShadow: gdgTheme.shadows.button,
-                                textDecoration: 'none',
-                                transition: 'background-color 0.2s ease'
-                            }}
-                            onMouseEnter={(e) => {
-                                e.target.style.backgroundColor = gdgTheme.colors.primary.darkBlue;
-                            }}
-                            onMouseLeave={(e) => {
-                                e.target.style.backgroundColor = gdgTheme.colors.primary.blue;
+                                width: '100%',
+                                textAlign: 'center'
                             }}
                         >
                             Live Competition
                         </button>
 
-                        {/* Authentication Section */}
                         {!isAuthenticated ? (
-                            /* Sign In Button */
                             <button
-                                onClick={handleSignIn}
-                                disabled={loading}
+                                onClick={() => { handleSignIn(); setIsMobileMenuOpen(false); }}
                                 style={{
-                                    backgroundColor: loading
-                                        ? gdgTheme.colors.neutral.gray
-                                        : gdgTheme.colors.secondary.green,
+                                    backgroundColor: gdgTheme.colors.secondary.green,
                                     color: gdgTheme.colors.text.inverse,
                                     border: 'none',
-                                    ...gdgTheme.typography.styles.button,
-                                    padding: `${gdgTheme.spacing.md} ${gdgTheme.spacing.lg}`,
+                                    padding: gdgTheme.spacing.md,
                                     borderRadius: gdgTheme.borderRadius.medium,
-                                    cursor: loading ? 'not-allowed' : 'pointer',
-                                    boxShadow: gdgTheme.shadows.button,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: gdgTheme.spacing.sm,
-                                    transition: 'background-color 0.2s ease'
-                                }}
-                                onMouseEnter={(e) => {
-                                    if (!loading) {
-                                        e.target.style.backgroundColor = gdgTheme.colors.secondary.darkGreen;
-                                    }
-                                }}
-                                onMouseLeave={(e) => {
-                                    if (!loading) {
-                                        e.target.style.backgroundColor = gdgTheme.colors.secondary.green;
-                                    }
+                                    cursor: 'pointer',
+                                    width: '100%',
+                                    display: 'flex', justifyContent: 'center', alignItems: 'center', gap: gdgTheme.spacing.sm
                                 }}
                             >
-                                {loading ? (
-                                    <>
-                                        <div style={{
-                                            width: '16px',
-                                            height: '16px',
-                                            border: '2px solid transparent',
-                                            borderTop: '2px solid white',
-                                            borderRadius: '50%',
-                                            animation: 'spin 1s linear infinite'
-                                        }} />
-                                        Signing in...
-                                    </>
-                                ) : (
-                                    <>
-                                        Sign In
-                                    </>
-                                )}
+                                {loading ? 'Signing in...' : 'Sign In'}
                             </button>
                         ) : (
-                            /* User Dropdown - FIXED SECTION */
-                            <div style={{ position: 'relative' }}>
-                                <button
-                                    onClick={() => setShowDropdown(!showDropdown)}
-                                    style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: gdgTheme.spacing.sm,
-                                        padding: `${gdgTheme.spacing.sm} ${gdgTheme.spacing.md}`,
-                                        backgroundColor: gdgTheme.colors.background.primary,
-                                        border: `1px solid ${gdgTheme.colors.neutral.lightGray}`,
-                                        borderRadius: gdgTheme.borderRadius.medium,
-                                        cursor: 'pointer',
-                                        transition: 'border-color 0.2s ease',
-                                        ...gdgTheme.typography.styles.button
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.borderColor = gdgTheme.colors.primary.blue;
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.borderColor = gdgTheme.colors.neutral.lightGray;
-                                    }}
-                                >
-                                    {/* Avatar - Always stays blue */}
-                                    <div style={{
-                                        width: '32px',
-                                        height: '32px',
-                                        borderRadius: '50%',
-                                        backgroundColor: gdgTheme.colors.primary.blue,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        color: 'white',
-                                        fontSize: '0.9rem',
-                                        fontWeight: 'bold',
-                                        flexShrink: 0,
-                                        pointerEvents: 'none'
-                                    }}>
-                                        {user?.displayName?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
-                                    </div>
-
-                                    {/* Name */}
-                                    <span style={{
-                                        fontSize: '0.9rem',
-                                        fontWeight: '500',
-                                        maxWidth: '100px',
-                                        overflow: 'hidden',
-                                        textOverflow: 'ellipsis',
-                                        whiteSpace: 'nowrap',
-                                        color: gdgTheme.colors.text.primary
-                                    }}>
-                                        {user?.displayName?.split(' ')[0] || 'User'}
-                                    </span>
-
-                                    {/* Dropdown Arrow */}
-                                    <span style={{
-                                        fontSize: '0.8rem',
-                                        color: gdgTheme.colors.text.primary
-                                    }}>
-                                        ▼
-                                    </span>
-                                </button>
-
-                                {/* Dropdown Menu */}
-                                {showDropdown && (
-                                    <div style={{
-                                        position: 'absolute',
-                                        top: '100%',
-                                        right: 0,
-                                        marginTop: '8px',
-                                        backgroundColor: gdgTheme.colors.background.primary,
-                                        border: `1px solid ${gdgTheme.colors.neutral.lightGray}`,
-                                        borderRadius: gdgTheme.borderRadius.medium,
-                                        boxShadow: gdgTheme.shadows.large,
-                                        minWidth: '80px',
-                                        maxWidth: '400px',
-                                        width: 'max-content',
-                                        zIndex: 1000
-                                    }}>
-                                        {/* User Info */}
-                                        <div style={{
-                                            padding: gdgTheme.spacing.md,
-                                            borderBottom: `1px solid ${gdgTheme.colors.neutral.lightGray}`
-                                        }}>
-                                            <div style={{
-                                                fontSize: '1rem',
-                                                fontWeight: '500',
-                                                marginBottom: '0.25rem',
-                                                whiteSpace: 'nowrap',
-                                                overflow: 'hidden',
-                                                textOverflow: 'ellipsis'
-                                            }}>
-                                                {user?.displayName}
-                                            </div>
-                                            <div style={{
-                                                fontSize: '0.8rem',
-                                                color: gdgTheme.colors.text.secondary,
-                                                whiteSpace: 'nowrap',
-                                                overflow: 'hidden',
-                                                textOverflow: 'ellipsis'
-                                            }}>
-                                                {user?.email}
-                                            </div>
-                                        </div>
-
-                                        {/* Menu Items */}
-                                        <div>
-                                            <div style={{
-                                                height: '1px',
-                                                backgroundColor: gdgTheme.colors.neutral.lightGray,
-                                            }} />
-
-                                            <button
-                                                onClick={handleSignOut}
-                                                disabled={loading}
-                                                style={{
-                                                    width: '100%',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: gdgTheme.spacing.sm,
-                                                    padding: `${gdgTheme.spacing.md} ${gdgTheme.spacing.md}`,
-                                                    backgroundColor: 'transparent',
-                                                    border: 'none',
-                                                    color: gdgTheme.colors.accent.red,
-                                                    fontSize: '0.9rem',
-                                                    cursor: loading ? 'not-allowed' : 'pointer',
-                                                    transition: 'background-color 0.2s ease',
-                                                    textAlign: 'left',
-                                                    whiteSpace: 'nowrap'
-                                                }}
-                                                onMouseEnter={(e) => {
-                                                    if (!loading) {
-                                                        e.target.style.backgroundColor = 'rgba(234, 67, 53, 0.1)';
-                                                    }
-                                                }}
-                                                onMouseLeave={(e) => {
-                                                    e.target.style.backgroundColor = 'transparent';
-                                                }}
-                                            >
-                                                {loading ? 'Signing out...' : 'Sign Out'}
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
+                            <button
+                                onClick={handleSignOut}
+                                style={{
+                                    backgroundColor: 'transparent',
+                                    color: gdgTheme.colors.accent.red,
+                                    border: `1px solid ${gdgTheme.colors.accent.red}`,
+                                    padding: gdgTheme.spacing.md,
+                                    borderRadius: gdgTheme.borderRadius.medium,
+                                    cursor: 'pointer',
+                                    width: '100%',
+                                    textAlign: 'center'
+                                }}
+                            >
+                                Sign Out
+                            </button>
                         )}
-                    </nav>
-                </div>
-
-                {/* Loading spinner CSS */}
-                <style>
-                    {`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}
-                </style>
+                    </div>
+                )}
             </header>
 
             {/* Error Toast */}
             {error && (
                 <div style={{
-                    position: 'fixed',
-                    top: '80px',
-                    right: '20px',
-                    backgroundColor: gdgTheme.colors.accent.red,
-                    color: 'white',
-                    padding: gdgTheme.spacing.md,
-                    borderRadius: gdgTheme.borderRadius.medium,
-                    boxShadow: gdgTheme.shadows.large,
-                    zIndex: 2000,
-                    maxWidth: '300px',
-                    fontSize: '0.9rem'
+                    position: 'fixed', top: '80px', right: '20px',
+                    backgroundColor: gdgTheme.colors.accent.red, color: 'white',
+                    padding: gdgTheme.spacing.md, borderRadius: gdgTheme.borderRadius.medium,
+                    boxShadow: gdgTheme.shadows.large, zIndex: 2000, maxWidth: '300px'
                 }}>
                     {error}
                 </div>
-            )}
-
-            {/* Close dropdown when clicking outside */}
-            {showDropdown && (
-                <div
-                    style={{
-                        position: 'fixed',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        zIndex: 999
-                    }}
-                    onClick={() => setShowDropdown(false)}
-                />
             )}
         </>
     );

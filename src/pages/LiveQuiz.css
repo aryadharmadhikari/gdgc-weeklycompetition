@@ -295,7 +295,7 @@ body {
   font-weight: 700;
   color: #ffffff;
   /* New Gradient */
-  background: linear-gradient(135deg, var(--google-blue) 0%, var(--google-green) 100%);
+  background: var(--google-green);
   border: none;
   border-radius: 12px;
   cursor: pointer;

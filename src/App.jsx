@@ -1,35 +1,33 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Landing from './pages/Landing';
+import Home from './pages/Landing.jsx';
+import LiveQuiz from './pages/LiveQuiz';
 import Leaderboard from './pages/Leaderboard';
-import { loadGoogleFonts, gdgTheme } from './theme/gdgctheme';
-import LiveQuiz from "./pages/LiveQuiz";
 import { AuthProvider } from './contexts/AuthContext';
-import Explanations from './pages/Explanations';
+
+// IMPORT THE NEW MODAL
+import YearSelectionModal from './components/auth/YearSelectionModal';
 
 function App() {
-    useEffect(() => {
-        loadGoogleFonts();
-    }, []);
-
     return (
         <AuthProvider>
-            <div
-                className="App"
-                style={{
-                    fontFamily: gdgTheme.typography.primary.family,
-                    color: gdgTheme.colors.text.primary
-                }}
-            >
-                <Router>
-                    <Routes>
-                        <Route path="/" element={<Landing />} />
-                        <Route path="/leaderboard" element={<Leaderboard />} />
-                        <Route path="/live-quiz" element={<LiveQuiz />} />
-                        <Route path="/explanations" element={<Explanations />} />
-                    </Routes>
-                </Router>
-            </div>
+            <Router>
+                <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+
+                    {/* PLACE THE MODAL HERE */}
+                    {/* It will be invisible unless a new user is signing up */}
+                    <YearSelectionModal />
+
+                    <main style={{ flex: 1 }}>
+                        <Routes>
+                            <Route path="/" element={<Home />} />
+                            <Route path="/live-quiz" element={<LiveQuiz />} />
+                            <Route path="/leaderboard" element={<Leaderboard />} />
+                        </Routes>
+                    </main>
+
+                </div>
+            </Router>
         </AuthProvider>
     );
 }

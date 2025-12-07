@@ -1,73 +1,115 @@
-import { useState, useEffect, useContext, createContext } from 'react';
+import React, { createContext, useContext, useState, useEffect } from "react";
+import { auth, googleProvider, db } from "../firebase/config";
+import { signInWithPopup, signOut as firebaseSignOut, onAuthStateChanged } from "firebase/auth";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 
 const AuthContext = createContext();
 
-export const useAuth = () => {
-    const context = useContext(AuthContext);
-    if (!context) {
-        throw new Error('useAuth must be used within an AuthProvider');
-    }
-    return context;
-};
+export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    // 🎯 CHANGE THIS TO SWITCH BETWEEN USER/ADMIN
-    const MOCK_USER_ROLE = 'user';  // Change to 'admin' to test admin features
+    // Controls the popup visibility
+    const [showYearModal, setShowYearModal] = useState(false);
+    // Holds the user data temporarily until they pick a year
+    const [pendingUser, setPendingUser] = useState(null);
 
-    // Simple sign-in (no parameters needed for mock)
+    // --- LOGIC: 1=EXTC, 2=COMPS, 3=IT, 4=MECH ---
+    const deriveBranchFromEmail = (email) => {
+        const firstChar = email.charAt(0);
+        switch(firstChar) {
+            case '1': return 'EXTC';
+            case '2': return 'COMPS';
+            case '3': return 'IT';
+            case '4': return 'MECH';
+            default: return 'Other';
+        }
+    };
+
     const signIn = async () => {
         try {
-            // Mock sign-in with your details
-            const mockUser = {
-                uid: 'mock-user-123',
-                displayName: 'Arya Dharmadhikari',
-                email: 'arya.dharmadhikari@dbit.in',
-                photoURL: 'https://via.placeholder.com/150',
-                role: MOCK_USER_ROLE  // Uses the role set above
-            };
+            const result = await signInWithPopup(auth, googleProvider);
+            const googleUser = result.user;
 
-            // Simulate API delay
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            // Check if user already exists in Firestore
+            const userRef = doc(db, "users", googleUser.uid);
+            const userSnap = await getDoc(userRef);
 
-            setUser(mockUser);
-            return { success: true, user: mockUser };
+            if (userSnap.exists()) {
+                // RETURNING USER: Log them in immediately
+                setUser(googleUser);
+            } else {
+                // NEW USER: Do not log in yet. Show the modal.
+                setPendingUser(googleUser);
+                setShowYearModal(true);
+            }
         } catch (error) {
-            throw new Error('Sign-in failed. Please try again.');
+            console.error("Error signing in:", error);
+            throw error;
         }
     };
 
-    const signOut = async () => {
+    // --- CALLED BY MODAL WHEN 'SAVE' IS CLICKED ---
+    const completeSignup = async (selectedYear) => {
+        if (!pendingUser) return;
+
         try {
-            await new Promise(resolve => setTimeout(resolve, 500));
-            setUser(null);
-            return { success: true };
+            // 1. Auto-detect branch
+            const detectedBranch = deriveBranchFromEmail(pendingUser.email);
+
+            const userRef = doc(db, "users", pendingUser.uid);
+
+            // 2. Save Full Profile to DB
+            await setDoc(userRef, {
+                uid: pendingUser.uid,
+                name: pendingUser.displayName,
+                email: pendingUser.email,
+                photoURL: pendingUser.photoURL,
+                role: "student",
+                collegeYear: selectedYear, // Input from User
+                branch: detectedBranch,    // Auto-detected
+                score: 0,
+                createdAt: serverTimestamp(),
+            });
+
+            // 3. Official Login
+            setUser(pendingUser);
+            setShowYearModal(false);
+            setPendingUser(null);
         } catch (error) {
-            throw new Error('Sign-out failed. Please try again.');
+            console.error("Error completing signup:", error);
         }
     };
 
-    // Mock user persistence
+    const signOut = () => {
+        return firebaseSignOut(auth);
+    };
+
     useEffect(() => {
-        const checkAuth = async () => {
+        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+            // Only update user state if we aren't in the middle of registration
+            if (!showYearModal) {
+                setUser(currentUser);
+            }
             setLoading(false);
-        };
-        checkAuth();
+        });
+        return unsubscribe;
     }, []);
 
     const value = {
         user,
-        loading,
+        isAuthenticated: !!user,
         signIn,
         signOut,
-        isAuthenticated: !!user
+        showYearModal, // To show/hide modal
+        completeSignup // To save data
     };
 
     return (
         <AuthContext.Provider value={value}>
-            {children}
+            {!loading && children}
         </AuthContext.Provider>
     );
 };

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import './AdminPanel.css'; // We'll create this CSS file next
+import { refreshLeaderboardCache } from '../services/leaderboardService';
 
 // This component is the modal form for adding a new week
 // 'pageType' will be "Quiz" or "Explanation"
@@ -25,6 +26,14 @@ const AdminPanel = ({ pageType, onClose }) => {
 
     const [q3Solution, setQ3Solution] = useState('');
     const [q3Explanation, setQ3Explanation] = useState('');
+
+// Inside your Admin Panel Component
+    const handleRefreshLeaderboard = async () => {
+        setIsLoading(true);
+        await refreshLeaderboardCache();
+        alert("Leaderboard updated!");
+        setIsLoading(false);
+    };
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -164,6 +173,9 @@ const AdminPanel = ({ pageType, onClose }) => {
 
                     <button type="submit" className="admin-modal-submit-btn">
                         Publish New Week
+                    </button>
+                    <button onClick={handleRefreshLeaderboard}>
+                        Force Refresh Leaderboard
                     </button>
                 </form>
             </div>

@@ -1,177 +1,96 @@
-// Mock leaderboard service - replace with Firebase later
+import { db } from "../firebase/config";
+import { doc, getDoc, collection, getDocs, setDoc, query, orderBy, limit, serverTimestamp } from "firebase/firestore";
+
+// COLLECTION CONSTANTS
+const LEADERBOARD_COLLECTION = "leaderboard";
+const LEADERBOARD_DOC_ID = "global";
+const USERS_COLLECTION = "users";
+
+/**
+ * 🚀 O(1) READ OPERATION
+ * Fetches the pre-calculated leaderboard from a single document.
+ * Cost: 1 Read per page load (regardless of user count).
+ */
 export const getLeaderboardData = async () => {
     try {
-        // Simulate network delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        const leaderboardRef = doc(db, LEADERBOARD_COLLECTION, LEADERBOARD_DOC_ID);
+        const snapshot = await getDoc(leaderboardRef);
 
-        // Mock data - replace with Firebase query later
-        return [
-            {
-                id: '1',
-                rank: 1,
-                name: 'Simone D\'sa',
-                email: 'simone.dsa@dbit.in',
-                totalPoints: 3100,
-                questionsCompleted: 14
-            },
-            {
-                id: '2',
-                rank: 2,
-                name: 'Adithya Menon',
-                email: 'adithya.menon@dbit.in',
-                totalPoints: 2950,
-                questionsCompleted: 13
-            },
-            {
-                id: '3',
-                rank: 3,
-                name: 'Tanmay Tajane',
-                email: 'tanmay.tajane@dbit.in',
-                totalPoints: 2780,
-                questionsCompleted: 12
-            },
-            {
-                id: '4',
-                rank: 4,
-                name: 'Ankita Gadre',
-                email: 'ankita.gadre@dbit.in',
-                totalPoints: 2615,
-                questionsCompleted: 11
-            },
-            {
-                id: '5',
-                rank: 5,
-                name: 'Rex Mercilline',
-                email: 'rex.mercilline@dbit.in',
-                totalPoints: 2470,
-                questionsCompleted: 10
-            },
-            {
-                id: '6',
-                rank: 6,
-                name: 'Piyush Mistry',
-                email: 'piyush.mistry@dbit.in',
-                totalPoints: 2320,
-                questionsCompleted: 9
-            },
-            {
-                id: '7',
-                rank: 7,
-                name: 'Nilay Shahane',
-                email: 'nilay.shahane@dbit.in',
-                totalPoints: 2045,
-                questionsCompleted: 8
-            },
-            {
-                id: '8',
-                rank: 8,
-                name: 'Irene Illikal',
-                email: 'irene.illikal@dbit.in',
-                totalPoints: 1890,
-                questionsCompleted: 8
-            },
-            {
-                id: '9',
-                rank: 9,
-                name: 'Asma Sayed',
-                email: 'asma.sayed@dbit.in',
-                totalPoints: 1760,
-                questionsCompleted: 7
-            },
-            {
-                id: '10',
-                rank: 10,
-                name: 'Aditya Sabnis',
-                email: 'aditya.sabnis@dbit.in',
-                totalPoints: 1625,
-                questionsCompleted: 7
-            },
-            {
-                id: '11',
-                rank: 11,
-                name: 'Swarup Patil',
-                email: 'swarup.patil@dbit.in',
-                totalPoints: 1490,
-                questionsCompleted: 6
-            },
-            {
-                id: '12',
-                rank: 12,
-                name: 'Anusha Gupta',
-                email: 'anusha.gupta@dbit.in',
-                totalPoints: 1360,
-                questionsCompleted: 6
-            },
-            {
-                id: '13',
-                rank: 13,
-                name: 'Pramit Kulkarni',
-                email: 'pramit.kulkarni@dbit.in',
-                totalPoints: 1235,
-                questionsCompleted: 5
-            },
-            {
-                id: '14',
-                rank: 14,
-                name: 'Tushita Patil',
-                email: 'tushita.patil@dbit.in',
-                totalPoints: 1110,
-                questionsCompleted: 5
-            },
-            {
-                id: '15',
-                rank: 15,
-                name: 'Arya Dharmadhikari',
-                email: 'arya.dharmadhikari@dbit.in',
-                totalPoints: 980,
-                questionsCompleted: 4
-            },
-            {
-                id: '16',
-                rank: 16,
-                name: 'Prathmesh Sawant',
-                email: 'prathmesh.sawant@dbit.in',
-                totalPoints: 855,
-                questionsCompleted: 4
-            },
-            {
-                id: '17',
-                rank: 17,
-                name: 'Soham Datar',
-                email: 'soham.datar@dbit.in',
-                totalPoints: 720,
-                questionsCompleted: 3
-            }
-        ];
-
+        if (snapshot.exists()) {
+            const data = snapshot.data();
+            // Return the array of top users stored in the 'participants' field
+            return data.participants || [];
+        } else {
+            // Fallback if the aggregate document hasn't been created yet
+            console.warn("Leaderboard aggregate not found. Fetching live data...");
+            return await refreshLeaderboardCache();
+        }
     } catch (error) {
-        console.error('Error fetching leaderboard data:', error);
+        console.error('Error fetching leaderboard:', error);
         throw new Error('Failed to load leaderboard data');
     }
 };
 
-// Additional service functions - ready for Firebase integration
+/**
+ * ⚙️ O(N) WRITE OPERATION (Admin Use Only)
+ * Scans all users, calculates ranks, and updates the aggregate document.
+ * Run this function when a quiz ends or scores change.
+ */
+export const refreshLeaderboardCache = async () => {
+    try {
+        console.log("Recalculating leaderboard...");
+
+        // 1. Query Top 50 Users from the actual Users collection
+        // Adjust 'limit' based on how many you want to show
+        const usersRef = collection(db, USERS_COLLECTION);
+        const q = query(usersRef, orderBy("score", "desc"), limit(100));
+        const snapshot = await getDocs(q);
+
+        const participants = [];
+        let currentRank = 1;
+
+        // 2. Process and Format Data
+        snapshot.forEach((doc) => {
+            const userData = doc.data();
+            participants.push({
+                id: doc.id,
+                rank: currentRank++, // Calculate rank based on sort order
+                name: userData.name || "Anonymous",
+                email: userData.email, // Be careful exposing emails publicly
+                // Fallback for avatar if missing
+                photoURL: userData.photoURL || null,
+                // Ensure we handle missing scores gracefully
+                totalPoints: userData.score || 0,
+                questionsCompleted: userData.questionsCompleted || 0
+            });
+        });
+
+        // 3. Write the Array to the Single Aggregate Document
+        const leaderboardRef = doc(db, LEADERBOARD_COLLECTION, LEADERBOARD_DOC_ID);
+        await setDoc(leaderboardRef, {
+            participants: participants,
+            lastUpdated: serverTimestamp(),
+            totalCount: participants.length
+        });
+
+        console.log("Leaderboard cache updated successfully!");
+        return participants;
+
+    } catch (error) {
+        console.error("Error updating leaderboard cache:", error);
+        return [];
+    }
+};
+
+/**
+ * Helper: Find user's specific stats from the live cache
+ */
 export const getUserLeaderboardPosition = async (userId) => {
     try {
         const data = await getLeaderboardData();
         return data.find(user => user.id === userId) || null;
     } catch (error) {
         console.error('Error fetching user position:', error);
-        throw error;
-    }
-};
-
-export const getLeaderboardStats = async () => {
-    try {
-        const data = await getLeaderboardData();
-        return {
-            totalParticipants: data.length,
-            averageScore: Math.round(data.reduce((sum, user) => sum + user.totalPoints, 0) / data.length),
-            highestScore: Math.max(...data.map(user => user.totalPoints)),
-            totalQuestions: data.reduce((sum, user) => sum + user.questionsCompleted, 0)
-        };
-    } catch (error) {
-        console.error('Error fetching stats:', error);
         throw error;
     }
 };

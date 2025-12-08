@@ -1,99 +1,87 @@
-import { signInWithPopup, signOut } from 'firebase/auth';
-import { auth, googleProvider } from '../firebase/config.jsx';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { db } from '../firebase/config.jsx';
+// src/services/authService.js
+import { auth, googleProvider, db } from "../firebase/config";
+import { signInWithPopup, signOut } from "firebase/auth";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 
-export const signInWithGoogle = async () => {
+// Helper: Determine branch from email
+export const deriveBranchFromEmail = (email) => {
+    const firstChar = email.charAt(0);
+    switch(firstChar) {
+        case '1': return 'EXTC';
+        case '2': return 'COMPS';
+        case '3': return 'IT';
+        case '4': return 'MECH';
+        default: return 'Other';
+    }
+};
+
+// 1. Handle the Google Popup and Domain Check
+export const loginWithGoogle = async () => {
     try {
         const result = await signInWithPopup(auth, googleProvider);
         const user = result.user;
 
-        // Verify domain restriction
+        // 🛑 DOMAIN CHECK
         if (!user.email.endsWith('@dbit.in')) {
             await signOut(auth);
-            throw new Error('Access restricted to DBIT email addresses only. Please use your @dbit.in email.');
+            throw new Error("Access Restricted: Please use your college (@dbit.in) email.");
         }
 
-        // Store/update user information in Firestore
-        await createOrUpdateUserProfile(user);
-
-        return {
-            success: true,
-            user: {
-                uid: user.uid,
-                name: user.displayName,
-                email: user.email,
-                profilePicture: user.photoURL
-            }
-        };
+        return user;
     } catch (error) {
-        console.error('Authentication error:', error);
-
-        // Handle specific error cases
-        if (error.code === 'auth/popup-closed-by-user') {
-            throw new Error('Sign-in cancelled. Please try again.');
-        } else if (error.code === 'auth/popup-blocked') {
-            throw new Error('Pop-up blocked. Please allow pop-ups and try again.');
-        } else if (error.message.includes('dbit.in')) {
-            throw error; // Re-throw domain restriction error
-        } else {
-            throw new Error('Sign-in failed. Please try again.');
-        }
+        console.error("Auth Service Error:", error);
+        throw error;
     }
 };
 
-export const logOut = async () => {
-    try {
-        await signOut(auth);
-        return { success: true };
-    } catch (error) {
-        console.error('Sign-out error:', error);
-        throw new Error('Sign-out failed. Please try again.');
-    }
+// 2. Check if the user already has a profile in Firestore
+export const checkUserProfileExists = async (email) => {
+    if (!email) return false;
+
+    // CHANGED: using email as the Document ID
+    const userRef = doc(db, "users", email);
+    const userSnap = await getDoc(userRef);
+    return userSnap.exists();
 };
 
-// Create or update user profile in Firestore
-const createOrUpdateUserProfile = async (user) => {
+// 3. Save the new user's full profile
+export const registerNewUser = async (user, selectedYear) => {
+    const detectedBranch = deriveBranchFromEmail(user.email);
+
+    const userRef = doc(db, "users", user.email);
+
+    await setDoc(userRef, {
+        name: user.displayName,
+        email: user.email, // Kept this for easier reading/sorting in the console
+        role: "admin",
+        collegeYear: selectedYear,
+        branch: detectedBranch,
+        score: 0,
+        createdAt: serverTimestamp(),
+    });
+
+    return { ...user, branch: detectedBranch, collegeYear: selectedYear };
+};
+
+// 4. Sign Out
+export const logoutUser = () => {
+    return signOut(auth);
+};
+
+// 5. Fetch User Profile
+export const getUserProfile = async (email) => {
     try {
-        const userRef = doc(db, 'users', user.uid);
+        if (!email) return null;
+
+        const userRef = doc(db, "users", email);
         const userSnap = await getDoc(userRef);
 
-        const userData = {
-            name: user.displayName,
-            email: user.email,
-            profilePicture: user.photoURL,
-            lastSignIn: new Date(),
-            domain: 'dbit.in'
-        };
-
-        if (!userSnap.exists()) {
-            // New user - create profile
-            await setDoc(userRef, {
-                ...userData,
-                createdAt: new Date(),
-                totalPoints: 0,
-                questionsCompleted: 0,
-                competitions: []
-            });
-        } else {
-            // Existing user - update profile
-            await setDoc(userRef, userData, { merge: true });
+        if (userSnap.exists()) {
+            return userSnap.data();
         }
+        return null;
     } catch (error) {
-        console.error('Error creating/updating user profile:', error);
+        console.error("Error fetching user profile:", error);
+        return null;
     }
-};
-
-// Get current user
-export const getCurrentUser = () => {
-    return new Promise((resolve, reject) => {
-        const unsubscribe = auth.onAuthStateChanged(user => {
-            unsubscribe();
-            if (user && user.email.endsWith('@dbit.in')) {
-                resolve(user);
-            } else {
-                resolve(null);
-            }
-        }, reject);
-    });
 };

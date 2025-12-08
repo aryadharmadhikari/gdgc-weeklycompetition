@@ -98,7 +98,7 @@ const ExplanationAccordion = ({ question, isOpen, onClick }) => {
 };
 
 const Explanations = () => {
-    
+
     const { user } = useAuth(); // ✅ This will now work with the updated import
     const [showAdminPanel, setShowAdminPanel] = useState(false);
     const [selectedWeek, setSelectedWeek] = useState(Object.keys(allExplanations)[0]);
@@ -112,70 +112,70 @@ const Explanations = () => {
 
     return (
         <>
-        <Header />
-        <div className="quiz-page-container">
-            <div className="quiz-content">
+            <Header />
+            <div className="quiz-page-container">
+                <div className="quiz-content">
 
-                {showAdminPanel && (
-                    <AdminPanel
-                        pageType="Explanation"
-                        onClose={() => setShowAdminPanel(false)}
-                    />
-                )}
-
-                <div className="quiz-header-controls">
-                    <Link to="/" className="back-link">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                        <span>Back</span>
-                    </Link>
-
-                    {user && user.role === 'admin' && (
-                        <button
-                            className="admin-add-week-btn"
-                            onClick={() => setShowAdminPanel(true)}
-                        >
-                            + Add New Week
-                        </button>
+                    {showAdminPanel && (
+                        <AdminPanel
+                            pageType="Explanation"
+                            onClose={() => setShowAdminPanel(false)}
+                        />
                     )}
+
+                    <div className="quiz-header-controls">
+                        <Link to="/" className="back-link">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                            <span>Back</span>
+                        </Link>
+
+                        {user && user.role === 'admin' && (
+                            <button
+                                className="admin-add-week-btn"
+                                onClick={() => setShowAdminPanel(true)}
+                            >
+                                + Add New Week
+                            </button>
+                        )}
+                    </div>
+
+                    <h1 className="quiz-title">Weekly Explanations</h1>
+
+                    <nav className="week-nav">
+                        {Object.keys(allExplanations).map(week => (
+                            <button
+                                key={week}
+                                className={`week-nav-button ${selectedWeek === week ? 'active' : ''}`}
+                                onClick={() => {
+                                    setSelectedWeek(week);
+                                    setOpenQuestionId(null);
+                                }}
+                            >
+                                Week {week}
+                            </button>
+                        ))}
+                    </nav>
+
+                    <p className="quiz-subtitle">
+                        Select a week to view the official solutions and explanations.
+                    </p>
+
+                    {currentQuestions.map(question => (
+                        <ExplanationAccordion
+                            key={question.id}
+                            question={question}
+                            isOpen={openQuestionId === question.id}
+                            onClick={() => handleToggle(question.id)}
+                        />
+                    ))}
                 </div>
 
-                <h1 className="quiz-title">Weekly Explanations</h1>
-
-                <nav className="week-nav">
-                    {Object.keys(allExplanations).map(week => (
-                        <button
-                            key={week}
-                            className={`week-nav-button ${selectedWeek === week ? 'active' : ''}`}
-                            onClick={() => {
-                                setSelectedWeek(week);
-                                setOpenQuestionId(null);
-                            }}
-                        >
-                            Week {week}
-                        </button>
-                    ))}
-                </nav>
-
-                <p className="quiz-subtitle">
-                    Select a week to view the official solutions and explanations.
-                </p>
-
-                {currentQuestions.map(question => (
-                    <ExplanationAccordion
-                        key={question.id}
-                        question={question}
-                        isOpen={openQuestionId === question.id}
-                        onClick={() => handleToggle(question.id)}
-                    />
-                ))}
             </div>
-        
-        </div>
-        <Footer />
+            <Footer />
         </>
-        
+
     );
 };
 

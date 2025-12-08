@@ -5,7 +5,8 @@ import {
     loginWithGoogle,
     checkUserProfileExists,
     registerNewUser,
-    logoutUser
+    logoutUser,
+    getUserProfile // <--- MAKE SURE THIS IS IMPORTED
 } from "../services/authService";
 
 const AuthContext = createContext();
@@ -23,22 +24,18 @@ export const AuthProvider = ({ children }) => {
     // --- 1. SIGN IN FLOW ---
     const signIn = async () => {
         try {
-            // A. Call Service to handle Google Auth & Domain Check
             const googleUser = await loginWithGoogle();
-
-            // B. Check if profile exists in DB
             const exists = await checkUserProfileExists(googleUser.uid);
 
             if (exists) {
-                // User exists -> Log them in
-                setUser(googleUser);
+                // [FIX] Fetch full profile (Role/Branch) before setting state
+                const profileData = await getUserProfile(googleUser.uid);
+                setUser({ ...googleUser, ...profileData });
             } else {
-                // User is new -> Show Modal
                 setPendingUser(googleUser);
                 setShowYearModal(true);
             }
         } catch (error) {
-            // Pass error up to UI
             throw error;
         }
     };
@@ -48,11 +45,10 @@ export const AuthProvider = ({ children }) => {
         if (!pendingUser) return;
 
         try {
-            // Call Service to write to DB
-            await registerNewUser(pendingUser, selectedYear);
+            // Service returns the combined user object (Google + DB Data)
+            const fullUser = await registerNewUser(pendingUser, selectedYear);
 
-            // Finalize Login
-            setUser(pendingUser);
+            setUser(fullUser);
             setShowYearModal(false);
             setPendingUser(null);
         } catch (error) {
@@ -67,14 +63,19 @@ export const AuthProvider = ({ children }) => {
 
     // --- 3. SESSION MONITOR ---
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             if (!showYearModal) {
                 if (currentUser && !currentUser.email.endsWith('@dbit.in')) {
-                    // Safety net: if session exists but email is wrong, kill it
                     logoutUser();
-                    setUser(null)
+                    setUser(null);
+                } else if (currentUser) {
+                    // [FIX] Fetch Firestore Data on Page Refresh
+                    const profileData = await getUserProfile(currentUser.uid);
+
+                    // Merge Google Data with Firestore Data (Role, Branch, Year)
+                    setUser({ ...currentUser, ...profileData });
                 } else {
-                    setUser(currentUser);
+                    setUser(null);
                 }
             }
             setLoading(false);

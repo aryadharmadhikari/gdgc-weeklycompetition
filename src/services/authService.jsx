@@ -35,23 +35,25 @@ export const loginWithGoogle = async () => {
 };
 
 // 2. Check if the user already has a profile in Firestore
-export const checkUserProfileExists = async (uid) => {
-    const userRef = doc(db, "users", uid);
+export const checkUserProfileExists = async (email) => {
+    if (!email) return false;
+
+    // CHANGED: using email as the Document ID
+    const userRef = doc(db, "users", email);
     const userSnap = await getDoc(userRef);
     return userSnap.exists();
 };
 
-// 3. Save the new user's full profile (Called after Year Selection)
+// 3. Save the new user's full profile
 export const registerNewUser = async (user, selectedYear) => {
     const detectedBranch = deriveBranchFromEmail(user.email);
-    const userRef = doc(db, "users", user.uid);
+
+    const userRef = doc(db, "users", user.email);
 
     await setDoc(userRef, {
-        uid: user.uid,
         name: user.displayName,
-        email: user.email,
-        photoURL: user.photoURL,
-        role: "student",
+        email: user.email, // Kept this for easier reading/sorting in the console
+        role: "admin",
         collegeYear: selectedYear,
         branch: detectedBranch,
         score: 0,
@@ -64,4 +66,22 @@ export const registerNewUser = async (user, selectedYear) => {
 // 4. Sign Out
 export const logoutUser = () => {
     return signOut(auth);
+};
+
+// 5. Fetch User Profile
+export const getUserProfile = async (email) => {
+    try {
+        if (!email) return null;
+
+        const userRef = doc(db, "users", email);
+        const userSnap = await getDoc(userRef);
+
+        if (userSnap.exists()) {
+            return userSnap.data();
+        }
+        return null;
+    } catch (error) {
+        console.error("Error fetching user profile:", error);
+        return null;
+    }
 };

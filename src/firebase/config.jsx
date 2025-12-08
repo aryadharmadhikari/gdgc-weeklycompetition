@@ -18,7 +18,12 @@ const app = initializeApp(firebaseConfig);
 
 // Initialize Services
 export const auth = getAuth(app);
+
+// Configure Google Auth Provider with domain restriction
 export const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({
+    hd: 'dbit.in' // Restrict to dbit.in domain
+});
 export const db = getFirestore(app);
 
 export default app;

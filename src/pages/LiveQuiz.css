@@ -261,7 +261,7 @@ body {
   border: 1px solid var(--google-border-grey);
   border-radius: 8px;
   font-family: 'Roboto', sans-serif;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   background-color: #fff;
 }
 .lang-select:focus {

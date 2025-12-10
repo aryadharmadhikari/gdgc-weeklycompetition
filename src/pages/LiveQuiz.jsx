@@ -11,7 +11,7 @@ import { getQuizWeeks, submitQuizWeek } from '../services/quizService';
 
 // --- Child Components (Keep these exactly as they were) ---
 const CodeEditor = ({ code, setCode, lang, setLang }) => {
-    const languages = ['javascript', 'python', 'java', 'c', 'cpp'];
+    const languages = ['javascript', 'python', 'java', 'c', 'c++'];
     return (
         <div className="editor-wrapper">
             <div className="editor-toolbar">

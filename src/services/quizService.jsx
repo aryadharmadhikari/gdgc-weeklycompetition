@@ -9,7 +9,8 @@ import {
     where,
     serverTimestamp,
     updateDoc,
-    increment
+    increment,
+    arrayUnion
 } from "firebase/firestore";
 
 // COLLECTION CONSTANTS
@@ -43,29 +44,43 @@ export const getQuizWeeks = async () => {
  */
 export const submitQuizWeek = async (userEmail, weekId, formattedSolutions) => {
     try {
-        // 1. Create ID using Email (e.g., "student@dbit.in_1")
-        const submissionId = `${userEmail}_${weekId}`;
-        const submissionRef = doc(db, SUBMISSIONS_COLLECTION, submissionId);
-
-        // 2. Point to User Profile using Email (New Schema)
+        // 1. Reference the Single User Submission Document
+        const userSubmissionRef = doc(db, SUBMISSIONS_COLLECTION, userEmail);
         const userRef = doc(db, USERS_COLLECTION, userEmail);
 
-        const docSnap = await getDoc(submissionRef);
-        const isNewSubmission = !docSnap.exists();
+        // 2. Prepare the Payload using Nested Object Syntax
+        // We use computed property names [weekId] to target the specific week key
+        const payload = {
+            weeks: {
+                [weekId]: {
+                    solutions: formattedSolutions,
+                    status: 'submitted',
+                    submittedAt: serverTimestamp(),
+                }
+            }
+        };
 
-        // 3. Save Submission
-        await setDoc(submissionRef, {
-            userEmail: userEmail,
-            weekId,
-            solutions: formattedSolutions,
-            status: 'submitted',
-            submittedAt: serverTimestamp(),
-        }, { merge: true });
+        // 3. Check if this is a NEW submission (for scoring)
+        // We need to read the doc first to see if this specific week key already exists
+        const docSnap = await getDoc(userSubmissionRef);
+        let isNewForScore = true;
 
-        // 4. Increment Score
-        if (isNewSubmission) {
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            // If weeks object exists AND this weekId exists inside it, it's an update, not new.
+            if (data.weeks && data.weeks[weekId]) {
+                isNewForScore = false;
+            }
+        }
+
+        // 4. Save to Firestore (Merge ensures we don't overwrite other weeks)
+        await setDoc(userSubmissionRef, payload, { merge: true });
+
+        // 5. Increment Score (Only if it's the first time submitting THIS week)
+        if (isNewForScore) {
             await updateDoc(userRef, {
-                questionsCompleted: increment(formattedSolutions.length)
+                questionsCompleted: increment(formattedSolutions.length),
+                completedWeeks: arrayUnion(weekId) // Keep this optimization!
             });
         }
 
@@ -126,5 +141,27 @@ export const addQuizWeek = async (weekId, weekTitle, questions, isVisible) => {
     } catch (error) {
         console.error("Error adding week:", error);
         throw error;
+    }
+};
+
+/**
+ * 🕵️‍♂️ Get User Submission (Refactored)
+ * Fetches the specific week from the user's single document.
+ */
+export const getUserSubmission = async (userEmail, weekId) => {
+    try {
+        const docRef = doc(db, SUBMISSIONS_COLLECTION, userEmail);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            // Return only the specific week's data if it exists
+            return data.weeks ? data.weeks[weekId] : null;
+        } else {
+            return null;
+        }
+    } catch (error) {
+        console.error("Error checking submission:", error);
+        return null;
     }
 };

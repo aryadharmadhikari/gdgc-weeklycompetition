@@ -7,7 +7,7 @@ import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
 
 // IMPORT SERVICES
-import { getQuizWeeks, submitQuizWeek } from '../services/quizService';
+import { getQuizWeeks, submitQuizWeek, getUserSubmission} from '../services/quizService';
 
 // --- Child Components (Keep these exactly as they were) ---
 const CodeEditor = ({ code, setCode, lang, setLang }) => {
@@ -72,11 +72,13 @@ const LiveQuiz = () => {
     const [allQuestions, setAllQuestions] = useState({}); // Stores all fetched weeks
     const [selectedWeek, setSelectedWeek] = useState(null);
     const [currentQuestions, setCurrentQuestions] = useState([]);
+    const [alreadySubmitted, setAlreadySubmitted] = useState(false);
 
     // User Input States
     const [openQuestionId, setOpenQuestionId] = useState(null);
     const [solutions, setSolutions] = useState({});
     const [qnaMessages, setQnaMessages] = useState({});
+
 
     // 1. AUTH CHECK: Redirect if not signed in
     useEffect(() => {
@@ -122,6 +124,48 @@ const LiveQuiz = () => {
         }
     }, [selectedWeek, allQuestions]);
 
+    useEffect(() => {
+        const loadWeekData = async () => {
+            if (selectedWeek && allQuestions[selectedWeek]) {
+                setCurrentQuestions(allQuestions[selectedWeek]);
+                setOpenQuestionId(null);
+                setError('');
+
+                // Reset states
+                setAlreadySubmitted(false);
+                setSolutions({});
+                setQnaMessages({});
+
+                if (user) {
+                    setLoading(true); // Short load state for checking submission
+                    const submission = await getUserSubmission(user.email, selectedWeek);
+
+                    if (submission) {
+                        setAlreadySubmitted(true);
+
+                        // 🔄 RE-POPULATE ANSWERS
+                        // Map the array from DB back to the object structure UI expects
+                        const prevSolutions = {};
+                        const prevQna = {};
+
+                        submission.solutions.forEach(sol => {
+                            prevSolutions[sol.questionId] = {
+                                code: sol.code,
+                                lang: sol.language
+                            };
+                            prevQna[sol.questionId] = sol.qna;
+                        });
+
+                        setSolutions(prevSolutions);
+                        setQnaMessages(prevQna);
+                    }
+                    setLoading(false);
+                }
+            }
+        };
+
+        loadWeekData();
+    }, [selectedWeek, allQuestions, user]);
 
     // --- HANDLERS ---
 
@@ -150,6 +194,13 @@ const LiveQuiz = () => {
             return;
         }
 
+        // Optional: Confirm resubmission if they already submitted
+        if (alreadySubmitted) {
+            if (!window.confirm("You have already submitted this week. Do you want to overwrite your previous answers?")) {
+                return;
+            }
+        }
+
         setIsSubmitting(true);
         setError('');
 
@@ -165,13 +216,13 @@ const LiveQuiz = () => {
 
             // Submit to Firebase
             await submitQuizWeek(
-                user.uid,
                 user.email,
                 selectedWeek,
                 formattedSolutions
             );
 
-            alert(`Success! Week ${selectedWeek} answers submitted.`);
+            const actionType = alreadySubmitted ? "updated" : "submitted";
+            alert(`Success! Week ${selectedWeek} answers ${actionType}.`);
             navigate('/leaderboard');
 
         } catch (err) {
@@ -195,6 +246,16 @@ const LiveQuiz = () => {
                         <AdminPanel pageType="Quiz" onClose={() => setShowAdminPanel(false)} />
                     )}
 
+                    <div className="quiz-header-controls">
+                        <Link to="/" className="back-link">
+                            <span>← Back</span>
+                        </Link>
+                        {user.role === 'admin' && (
+                            <button className="admin-add-week-btn" onClick={() => setShowAdminPanel(true)}>
+                                + Add New Week
+                            </button>
+                        )}
+                    </div>
                     {/* ... (Header Controls and Title remain the same) ... */}
 
                     <h1 className="quiz-title">Live Coding Competition</h1>
@@ -248,14 +309,33 @@ const LiveQuiz = () => {
                     </div>
 
                     {currentQuestions.length > 0 && (
-                        <button
-                            className="submit-quiz-button"
-                            onClick={handleSubmit}
-                            disabled={isSubmitting}
-                            style={{ opacity: isSubmitting ? 0.7 : 1 }}
-                        >
-                            {isSubmitting ? 'Submitting...' : `Submit Week ${selectedWeek} Answers`}
-                        </button>
+                        <div style={{ textAlign: 'center', marginTop: '2rem' }}>
+                            <button
+                                className="submit-quiz-button"
+                                onClick={handleSubmit}
+                                disabled={isSubmitting}
+                                style={{ opacity: isSubmitting ? 0.7 : 1, marginTop: 0 }} // Reset margin since container has it
+                            >
+                                {isSubmitting
+                                    ? 'Processing...'
+                                    : alreadySubmitted
+                                        ? `Update / Resubmit Week ${selectedWeek}`
+                                        : `Submit Week ${selectedWeek} Answers`
+                                }
+                            </button>
+
+                            {/* ✨ NEW: Informational Note for Resubmissions */}
+                            {alreadySubmitted && (
+                                <p style={{
+                                    fontSize: '0.85rem',
+                                    color: '#5f6368',
+                                    marginTop: '0.8rem',
+                                    fontStyle: 'italic'
+                                }}>
+                                    Note: Your latest submission will overwrite previous answers and be used for the final score.
+                                </p>
+                            )}
+                        </div>
                     )}
                 </div>
             </div>

@@ -1,214 +1,257 @@
 import React, { useState, useEffect } from 'react';
 import './AdminPanel.css';
+import { addQuizWeek, getNextWeekNumber, getAllQuizWeeksForAdmin } from '../services/quizService';
 import { refreshLeaderboardCache } from '../services/leaderboardService';
-import { addQuizWeek, getNextWeekNumber } from '../services/quizService.jsx'; // Import the new helper
 
 const AdminPanel = ({ pageType, onClose }) => {
-    // State for dynamic week numbering
-    const [nextWeekNum, setNextWeekNum] = useState(null); // Will hold 1, 2, 3...
-    const [weekTopic, setWeekTopic] = useState(''); // User enters "Data Structures"
-    const [isLoading, setIsLoading] = useState(false); // Fixed missing state
+    // VIEW MODES: 'dashboard' (list of weeks) OR 'editor' (form)
+    const [viewMode, setViewMode] = useState('dashboard');
+    const [isLoading, setIsLoading] = useState(false);
 
-    // Question States
-    const [q1Prompt, setQ1Prompt] = useState('');
-    const [q1TestCases, setQ1TestCases] = useState('');
-    const [q1Solution, setQ1Solution] = useState('');
-    const [q1Explanation, setQ1Explanation] = useState('');
+    // DATA STATES
+    const [allWeeks, setAllWeeks] = useState([]); // List for dashboard
+    const [editingWeekNum, setEditingWeekNum] = useState(null); // The ID we are working on
 
-    const [q2Prompt, setQ2Prompt] = useState('');
-    const [q2TestCases, setQ2TestCases] = useState('');
-    const [q2Solution, setQ2Solution] = useState('');
-    const [q2Explanation, setQ2Explanation] = useState('');
+    // FORM STATES
+    const [questions, setQuestions] = useState([]);
 
-    const [q3Prompt, setQ3Prompt] = useState('');
-    const [q3TestCases, setQ3TestCases] = useState('');
-    const [q3Solution, setQ3Solution] = useState('');
-    const [q3Explanation, setQ3Explanation] = useState('');
-
-    // 1. Fetch the next week number immediately when Modal opens
+    // --- INITIALIZATION: Load Dashboard ---
     useEffect(() => {
-        const fetchWeekNum = async () => {
-            const num = await getNextWeekNumber();
-            setNextWeekNum(num);
-        };
-        fetchWeekNum();
+        loadDashboard();
     }, []);
 
-    const handleRefreshLeaderboard = async () => {
+    const loadDashboard = async () => {
         setIsLoading(true);
-        try {
-            await refreshLeaderboardCache();
-            alert("Leaderboard updated!");
-        } catch (error) {
-            console.error(error);
-            alert("Failed to refresh leaderboard.");
-        }
+        const weeks = await getAllQuizWeeksForAdmin();
+        setAllWeeks(weeks);
         setIsLoading(false);
     };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
+    // --- NAVIGATION HANDLERS ---
 
-        // 2. Construct the full title automatically
-        // Result: "Week 4: Data Structures"
-        const fullWeekTitle = `Week ${nextWeekNum}: ${weekTopic}`;
+    const handleCreateNew = async () => {
+        setIsLoading(true);
+        const nextNum = await getNextWeekNumber();
+        setEditingWeekNum(nextNum);
 
-        const newWeekData = {
-            id: nextWeekNum.toString(), // Store the ID explicitly if needed
-            weekTitle: fullWeekTitle,
-            questions: [
-                {
-                    title: 'Question 1',
-                    description: q1Prompt,
-                    testCases: q1TestCases,
-                    solution: q1Solution,
-                    explanation: q1Explanation
-                },
-                {
-                    title: 'Question 2',
-                    description: q2Prompt,
-                    testCases: q2TestCases,
-                    solution: q2Solution,
-                    explanation: q2Explanation
-                },
-                {
-                    title: 'Question 3 (Master)',
-                    description: q3Prompt,
-                    testCases: q3TestCases,
-                    solution: q3Solution,
-                    explanation: q3Explanation
-                },
-            ]
-        };
+        // 🚀 DEFAULT TEMPLATE: 3 Empty Questions, Q3 is Master
+        setQuestions([
+            { id: 1, title: 'Question 1', prompt: '', testCases: '', isMaster: false, isOpen: true },
+            { id: 2, title: 'Question 2', prompt: '', testCases: '', isMaster: false, isOpen: false },
+            { id: 3, title: 'Question 3', prompt: '', testCases: '', isMaster: true, isOpen: false } // Master Default
+        ]);
 
-        // Call the service to save to DB
-        // await addQuizWeek(newWeekData);
-
-        console.log(`Submitting new ${pageType} data:`, newWeekData);
-        alert(`Successfully created ${fullWeekTitle}!`);
-        onClose();
+        setIsLoading(false);
+        setViewMode('editor');
     };
+
+    const handleEditWeek = (weekData) => {
+        setEditingWeekNum(weekData.id);
+
+        // Parse database questions back to state
+        // Add 'isOpen' property for UI handling
+        const parsedQuestions = weekData.questions.map((q, idx) => ({
+            ...q,
+            testCases: Array.isArray(q.testCases) ? q.testCases.join('\n') : q.testCases, // Convert Array -> String for Textarea
+            isOpen: idx === 0 // Open first one by default
+        }));
+
+        setQuestions(parsedQuestions);
+        setViewMode('editor');
+    };
+
+    // --- EDITOR HANDLERS ---
+
+    const updateQuestion = (index, field, value) => {
+        setQuestions(prev => prev.map((q, i) => i === index ? { ...q, [field]: value } : q));
+    };
+
+    const toggleAccordion = (index) => {
+        setQuestions(prev => prev.map((q, i) => i === index ? { ...q, isOpen: !q.isOpen } : { ...q, isOpen: false }));
+    };
+
+    const addQuestion = () => {
+        const newQ = {
+            id: Date.now(),
+            title: `Question ${questions.length + 1}`,
+            prompt: '', testCases: '', isMaster: false, isOpen: true
+        };
+        setQuestions(prev => [...prev.map(q => ({...q, isOpen: false})), newQ]);
+    };
+
+    const removeQuestion = (index) => {
+        if(questions.length <= 1) return alert("Keep at least one question.");
+        setQuestions(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const handleSave = async (isLive) => {
+        // 🛡️ VALIDATION: Check for at least one Master Question
+        if (isLive) {
+            const hasMaster = questions.some(q => q.isMaster);
+            if (!hasMaster) {
+                alert("⚠️ Cannot Publish:\nYou must mark at least one question as the 'Master Question' (Mandatory) before publishing live.\n\nYou can still 'Save as Draft' if you aren't ready.");
+                return; // Stop the publish process
+            }
+        }
+        setIsLoading(true);
+        try {
+            // 1. Format for Database
+            const formattedQuestions = questions.map((q, i) => ({
+                id: `w${editingWeekNum}q${i+1}`,
+                title: q.title || `Question ${i+1}`,
+                prompt: q.prompt,
+                testCases: q.testCases.split('\n').filter(t => t.trim()), // String -> Array
+                isMaster: q.isMaster,
+                // Include solution/explanation only if on Explanation page
+                solutionCode: pageType === 'Explanation' ? q.solutionCode : '',
+                explanation: pageType === 'Explanation' ? q.explanation : ''
+            }));
+
+            // 2. Save
+            await addQuizWeek(editingWeekNum, `Week ${editingWeekNum}`, formattedQuestions, isLive);
+
+            alert(isLive ? `Week ${editingWeekNum} is now LIVE!` : `Week ${editingWeekNum} saved to Drafts.`);
+
+            // 3. Return to Dashboard
+            await loadDashboard();
+            setViewMode('dashboard');
+
+        } catch (error) {
+            console.error(error);
+            alert("Save failed.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // --- RENDER HELPERS ---
+
+    const renderDashboard = () => (
+        <div className="admin-modal-body">
+            <h3 style={{marginTop:0}}>Manage Content</h3>
+            <div className="dashboard-grid">
+                {/* Create New Card */}
+                <button className="create-new-btn" onClick={handleCreateNew}>
+                    <span style={{fontSize:'1.5rem'}}>+</span> Create Week {allWeeks.length + 1}
+                </button>
+
+                {/* Existing Weeks List */}
+                {allWeeks.map((week) => (
+                    <div key={week.id} className="week-card" onClick={() => handleEditWeek(week)}>
+                        <span className={`status-badge ${week.isVisible ? 'status-live' : 'status-draft'}`}>
+                            {week.isVisible ? '● Live' : '● Draft'}
+                        </span>
+                        <div className="wc-title">{week.title || `Week ${week.id}`}</div>
+                        <div className="wc-subtitle">{week.questions?.length || 0} Questions</div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+
+    const renderEditor = () => (
+        <>
+            <div className="admin-modal-body">
+                <div className="editor-toolbar">
+                    <div>
+                        <span style={{color:'#666', fontSize:'0.8rem', textTransform:'uppercase', fontWeight:'bold'}}>Editing</span>
+                        <div style={{fontSize:'1.5rem', fontWeight:'bold', color:'#1a73e8'}}>Week {editingWeekNum}</div>
+                    </div>
+                    <button className="btn" style={{border:'1px solid #ddd'}} onClick={() => setViewMode('dashboard')}>
+                        Cancel
+                    </button>
+                </div>
+
+                {questions.map((q, index) => (
+                    <div key={q.id} className={`question-block ${q.isOpen ? 'active' : ''} ${q.isMaster ? 'master' : ''}`}>
+                        <div className="qb-header" onClick={() => toggleAccordion(index)}>
+                            <span>
+                                {q.isMaster && "⭐ "}
+                                {q.title || `Question ${index + 1}`}
+                            </span>
+                            <div style={{display:'flex', gap:'10px', alignItems:'center'}}>
+                                {q.isMaster && <span style={{fontSize:'0.7rem', color:'#fbbc04', fontWeight:'bold'}}>MASTER</span>}
+                                {q.isOpen ? '▼' : '▶'}
+                            </div>
+                        </div>
+
+                        {q.isOpen && (
+                            <div className="qb-body">
+                                {/* Master Toggle */}
+                                <div style={{marginBottom:'15px', padding:'10px', background:'#fff8e1', borderRadius:'6px', display:'flex', alignItems:'center', gap:'10px'}}>
+                                    <input
+                                        type="checkbox"
+                                        checked={q.isMaster}
+                                        onChange={(e) => updateQuestion(index, 'isMaster', e.target.checked)}
+                                        style={{width:'auto'}}
+                                    />
+                                    <label style={{margin:0, color:'#b36b00', cursor:'pointer'}}>Mark as Master Question (Mandatory)</label>
+                                </div>
+
+                                <div className="input-group">
+                                    <label>Title</label>
+                                    <input value={q.title} onChange={e => updateQuestion(index, 'title', e.target.value)} />
+                                </div>
+                                <div className="input-group">
+                                    <label>Prompt</label>
+                                    <textarea rows={3} value={q.prompt} onChange={e => updateQuestion(index, 'prompt', e.target.value)} />
+                                </div>
+                                <div className="input-group">
+                                    <label>Test Cases (One per line)</label>
+                                    <textarea className="code" rows={3} value={q.testCases} onChange={e => updateQuestion(index, 'testCases', e.target.value)} />
+                                </div>
+
+                                {pageType === 'Explanation' && (
+                                    <div style={{marginTop:'15px', paddingTop:'15px', borderTop:'1px dashed #ccc'}}>
+                                        <div className="input-group">
+                                            <label>Solution Code</label>
+                                            <textarea className="code" value={q.solutionCode} onChange={e => updateQuestion(index, 'solutionCode', e.target.value)} />
+                                        </div>
+                                        <div className="input-group">
+                                            <label>Explanation Text</label>
+                                            <textarea value={q.explanation} onChange={e => updateQuestion(index, 'explanation', e.target.value)} />
+                                        </div>
+                                    </div>
+                                )}
+
+                                <button className="btn" style={{color:'red', fontSize:'0.8rem', padding:0}} onClick={() => removeQuestion(index)}>Delete Question</button>
+                            </div>
+                        )}
+                    </div>
+                ))}
+
+                <button className="btn btn-add" onClick={addQuestion}>+ Add Another Question</button>
+            </div>
+
+            <div className="footer-actions">
+                <button className="btn btn-save" onClick={() => handleSave(false)} disabled={isLoading}>
+                    {isLoading ? 'Saving...' : 'Save as Draft'}
+                </button>
+                <div style={{display:'flex', gap:'10px'}}>
+                    <button className="btn" style={{background:'#fbbc04', color:'#000'}} onClick={async () => {
+                        if(window.confirm("Refresh Leaderboard?")) {
+                            await refreshLeaderboardCache();
+                            alert("Done");
+                        }
+                    }}>
+                        Refresh Ranks
+                    </button>
+                    <button className="btn btn-publish" onClick={() => handleSave(true)} disabled={isLoading}>
+                        {isLoading ? 'Publishing...' : 'Publish Live'}
+                    </button>
+                </div>
+            </div>
+        </>
+    );
 
     return (
         <div className="admin-modal-backdrop">
             <div className="admin-modal-content">
                 <div className="admin-modal-header">
-                    <h2>Add New {pageType} Content</h2>
-                    <button onClick={onClose} className="admin-modal-close-btn">&times;</button>
+                    <h2>Admin Console</h2>
+                    <button onClick={onClose} style={{border:'none', background:'none', fontSize:'1.5rem', cursor:'pointer'}}>&times;</button>
                 </div>
-
-                <form onSubmit={handleSubmit} className="admin-modal-form">
-
-                    {/* 3. Replaced Manual Title Input with Dynamic Display + Topic Input */}
-                    <div className="week-header-section" style={{marginBottom: '20px', padding: '10px', background: '#f0f0f0', borderRadius: '5px'}}>
-                        <h3 style={{marginTop: 0}}>
-                            {nextWeekNum ? `Creating Week ${nextWeekNum}` : 'Calculating Week Number...'}
-                        </h3>
-                    </div>
-
-                    {/* --- Question 1 Fields --- */}
-                    <h4>Question 1</h4>
-                    <label>Q1 Description</label>
-                    <textarea
-                        placeholder="Enter the question description..."
-                        value={q1Prompt}
-                        onChange={(e) => setQ1Prompt(e.target.value)}
-                        required
-                    />
-                    <label>Q1 Test Cases</label>
-                    <textarea
-                        placeholder="Case 1: ...\nCase 2: ..."
-                        value={q1TestCases}
-                        onChange={(e) => setQ1TestCases(e.target.value)}
-                        required
-                    />
-
-                    {pageType === 'Explanation' && (
-                        <>
-                            <label>Q1 Solution Code</label>
-                            <textarea
-                                placeholder="Enter solution code..."
-                                value={q1Solution}
-                                onChange={(e) => setQ1Solution(e.target.value)}
-                            />
-                            <label>Q1 Explanation</label>
-                            <textarea
-                                placeholder="Enter detailed explanation..."
-                                value={q1Explanation}
-                                onChange={(e) => setQ1Explanation(e.target.value)}
-                            />
-                        </>
-                    )}
-
-                    {/* --- Question 2 Fields --- */}
-                    <h4>Question 2</h4>
-                    <label>Q2 Description</label>
-                    <textarea
-                        value={q2Prompt}
-                        onChange={(e) => setQ2Prompt(e.target.value)}
-                    />
-                    <label>Q2 Test Cases</label>
-                    <textarea
-                        value={q2TestCases}
-                        onChange={(e) => setQ2TestCases(e.target.value)}
-                    />
-
-                    {pageType === 'Explanation' && (
-                        <>
-                            <label>Q2 Solution Code</label>
-                            <textarea
-                                value={q2Solution}
-                                onChange={(e) => setQ2Solution(e.target.value)}
-                            />
-                            <label>Q2 Explanation</label>
-                            <textarea
-                                value={q2Explanation}
-                                onChange={(e) => setQ2Explanation(e.target.value)}
-                            />
-                        </>
-                    )}
-
-                    {/* --- Question 3 Fields --- */}
-                    <h4>Question 3 (Master)</h4>
-                    <label>Q3 Description</label>
-                    <textarea
-                        value={q3Prompt}
-                        onChange={(e) => setQ3Prompt(e.target.value)}
-                    />
-                    <label>Q3 Test Cases</label>
-                    <textarea
-                        value={q3TestCases}
-                        onChange={(e) => setQ3TestCases(e.target.value)}
-                    />
-                    {pageType === 'Explanation' && (
-                        <>
-                            <label>Q3 Solution Code</label>
-                            <textarea
-                                value={q3Solution}
-                                onChange={(e) => setQ3Solution(e.target.value)}
-                            />
-                            <label>Q3 Explanation</label>
-                            <textarea
-                                value={q3Explanation}
-                                onChange={(e) => setQ3Explanation(e.target.value)}
-                            />
-                        </>
-                    )}
-
-                    <div className="button-group" style={{marginTop: '20px', display: 'flex', gap: '10px'}}>
-                        <button type="submit" className="admin-modal-submit-btn" disabled={!nextWeekNum}>
-                            {nextWeekNum ? `Publish Week ${nextWeekNum}` : 'Loading...'}
-                        </button>
-
-                        <button
-                            type="button"
-                            onClick={handleRefreshLeaderboard}
-                            disabled={isLoading}
-                        >
-                            {isLoading ? 'Refreshing...' : 'Force Refresh Leaderboard'}
-                        </button>
-                    </div>
-                </form>
+                {viewMode === 'dashboard' ? renderDashboard() : renderEditor()}
             </div>
         </div>
     );

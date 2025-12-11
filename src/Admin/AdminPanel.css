@@ -1,117 +1,78 @@
-/* --- Google Color Palette --- */
-:root {
-    --google-blue: #4285f4;
-    --google-red: #db4437;
-    --google-green: #0f9d58;
-    --google-text-dark: #3c4043;
-    --google-border-grey: #dadce0;
-  }
-  
-  .admin-modal-backdrop {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.6);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 2000;
-  }
-  
-  .admin-modal-content {
-    background-color: #fff;
-    border-radius: 8px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-    width: 90%;
-    max-width: 700px;
-    max-height: 90vh;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-  }
-  
-  .admin-modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem 1.5rem;
-    border-bottom: 1px solid var(--google-border-grey);
-  }
-  
-  .admin-modal-header h2 {
-    margin: 0;
-    color: var(--google-blue);
-    font-weight: 500;
-  }
-  
-  .admin-modal-close-btn {
-    background: none;
-    border: none;
-    font-size: 2rem;
-    font-weight: 300;
-    color: var(--google-text-dark);
-    cursor: pointer;
-  }
-  
-  .admin-modal-form {
-    padding: 1.5rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-  
-  .admin-modal-form h4 {
-    margin: 0.5rem 0 0 0;
-    color: var(--google-text-dark);
-    border-bottom: 1px solid var(--google-border-grey);
-    padding-bottom: 0.5rem;
-  }
-  
-  .admin-modal-form label {
-    font-weight: 500;
-    font-size: 0.9rem;
-    color: var(--google-text-dark);
-    margin-bottom: -0.25rem;
-  }
-  
-  .admin-modal-form input[type="text"],
-  .admin-modal-form textarea {
-    width: 100%;
-    padding: 0.75rem;
-    border: 1px solid var(--google-border-grey);
-    border-radius: 8px;
-    font-family: 'Roboto', sans-serif;
-    font-size: 1rem;
-    box-sizing: border-box; /* Important */
-  }
-  
-  .admin-modal-form textarea {
-    min-height: 100px;
-    resize: vertical;
-  }
-  
-  .admin-modal-form input[type="text"]:focus,
-  .admin-modal-form textarea:focus {
-    outline: 2px solid var(--google-blue);
-    border-color: var(--google-blue);
-  }
-  
-  .admin-modal-submit-btn {
-    background-color: var(--google-green);
-    color: #fff;
-    font-size: 1rem;
-    font-weight: 500;
-    border: none;
-    border-radius: 8px;
-    padding: 0.8rem 1rem;
-    margin-top: 1rem;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-  }
-  
-  .admin-modal-submit-btn:hover {
-    background-color: #0c804a;
-  }
-  
+/* --- Modal Layout --- */
+.admin-modal-backdrop {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
+    display: flex; justify-content: center; align-items: center; z-index: 1000;
+}
+.admin-modal-content {
+    background: white; width: 90%; max-width: 900px; height: 85vh;
+    border-radius: 12px; display: flex; flex-direction: column; overflow: hidden;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+}
+.admin-modal-header {
+    padding: 15px 25px; border-bottom: 1px solid #eee; display: flex;
+    justify-content: space-between; align-items: center; background: #fff;
+}
+.admin-modal-body { flex: 1; overflow-y: auto; padding: 25px; background: #f8f9fa; }
+
+/* --- DASHBOARD VIEW (List of Weeks) --- */
+.dashboard-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
+.week-card {
+    background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px;
+    transition: all 0.2s; cursor: pointer; position: relative;
+}
+.week-card:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.05); border-color: #2196f3; }
+
+.status-badge {
+    position: absolute; top: 15px; right: 15px; font-size: 0.75rem;
+    padding: 4px 10px; border-radius: 12px; font-weight: bold; text-transform: uppercase;
+}
+.status-draft { background: #eee; color: #666; }
+.status-live { background: #e6f4ea; color: #1e8e3e; }
+
+.wc-title { font-size: 1.2rem; font-weight: bold; color: #333; margin-bottom: 5px; }
+.wc-subtitle { font-size: 0.9rem; color: #666; }
+
+.create-new-btn {
+    width: 100%; padding: 15px; border: 2px dashed #ccc; background: transparent;
+    border-radius: 8px; font-weight: bold; color: #666; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+}
+.create-new-btn:hover { border-color: #2196f3; color: #2196f3; background: #e3f2fd; }
+
+/* --- EDITOR VIEW --- */
+.editor-toolbar {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 20px; background: white; padding: 15px; border-radius: 8px; border: 1px solid #eee;
+}
+.question-block {
+    background: white; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 20px;
+    border-left: 4px solid transparent; overflow: hidden;
+}
+.question-block.active { border-left-color: #2196f3; }
+.question-block.master { border-left-color: #fbbc04; } /* Gold for Master */
+
+.qb-header {
+    padding: 12px 20px; background: #f1f3f4; cursor: pointer;
+    display: flex; justify-content: space-between; align-items: center; font-weight: 600;
+}
+.qb-body { padding: 20px; animation: fadeIn 0.3s; }
+
+.input-group { margin-bottom: 15px; }
+.input-group label { display: block; font-size: 0.85rem; font-weight: bold; color: #555; margin-bottom: 5px; }
+.input-group input, .input-group textarea {
+    width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit;
+}
+.input-group textarea.code { font-family: 'Courier New', monospace; font-size: 0.9rem; background: #fafafa; }
+
+/* Buttons */
+.footer-actions {
+    padding: 20px 30px; background: white; border-top: 1px solid #eee;
+    display: flex; justify-content: space-between; align-items: center;
+}
+.btn { padding: 10px 20px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; }
+.btn-save { background: #e0e0e0; color: #333; }
+.btn-save:hover { background: #d0d0d0; }
+.btn-publish { background: #1a73e8; color: white; }
+.btn-publish:hover { background: #1557b0; }
+.btn-add { background: transparent; color: #1a73e8; border: 1px solid #1a73e8; width: 100%; margin-top: 10px; }

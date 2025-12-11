@@ -7,17 +7,17 @@ import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
 
 // IMPORT SERVICES
-import { getQuizWeeks, submitQuizWeek } from '../services/quizService';
+import { getQuizWeeks, submitQuizWeek, getUserSubmission} from '../services/quizService';
 
 // --- Child Components (Keep these exactly as they were) ---
 const CodeEditor = ({ code, setCode, lang, setLang }) => {
-    const languages = ['javascript', 'python', 'java', 'c', 'cpp'];
+    const languages = ['javascript', 'python', 'java', 'c', 'c++'];
     return (
         <div className="editor-wrapper">
             <div className="editor-toolbar">
                 <label>Language:</label>
                 <select value={lang} onChange={(e) => setLang(e.target.value)} className="lang-select">
-                    {languages.map((l) => <option key={l} value={l}>{l.toUpperCase()}</option>)}
+                    {languages.map((l) => <option key={l} value={l}>{l.charAt(0).toUpperCase() + l.slice(1)}</option>)}
                 </select>
             </div>
             <textarea className="code-editor" value={code} onChange={(e) => setCode(e.target.value)} placeholder="Write your code here..." spellCheck="false" />
@@ -46,7 +46,7 @@ const QuestionAccordion = ({ question, solution, onSolutionChange, qna, onQnaCha
         </div>
         {isOpen && (
             <div className="question-body">
-                <p className="question-description">{question.description}</p>
+                <p className="question-prompt">{question.description || question.prompt || "No details provided."}</p>
                 <TestCaseViewer testCases={question.testCases} />
                 <CodeEditor
                     code={solution.code} setCode={(c) => onSolutionChange(question.id, { ...solution, code: c })}
@@ -57,7 +57,6 @@ const QuestionAccordion = ({ question, solution, onSolutionChange, qna, onQnaCha
         )}
     </div>
 );
-
 // --- MAIN COMPONENT ---
 const LiveQuiz = () => {
     const { user } = useAuth();
@@ -73,11 +72,13 @@ const LiveQuiz = () => {
     const [allQuestions, setAllQuestions] = useState({}); // Stores all fetched weeks
     const [selectedWeek, setSelectedWeek] = useState(null);
     const [currentQuestions, setCurrentQuestions] = useState([]);
+    const [alreadySubmitted, setAlreadySubmitted] = useState(false);
 
     // User Input States
     const [openQuestionId, setOpenQuestionId] = useState(null);
     const [solutions, setSolutions] = useState({});
     const [qnaMessages, setQnaMessages] = useState({});
+
 
     // 1. AUTH CHECK: Redirect if not signed in
     useEffect(() => {
@@ -123,6 +124,48 @@ const LiveQuiz = () => {
         }
     }, [selectedWeek, allQuestions]);
 
+    useEffect(() => {
+        const loadWeekData = async () => {
+            if (selectedWeek && allQuestions[selectedWeek]) {
+                setCurrentQuestions(allQuestions[selectedWeek]);
+                setOpenQuestionId(null);
+                setError('');
+
+                // Reset states
+                setAlreadySubmitted(false);
+                setSolutions({});
+                setQnaMessages({});
+
+                if (user) {
+                    setLoading(true); // Short load state for checking submission
+                    const submission = await getUserSubmission(user.email, selectedWeek);
+
+                    if (submission) {
+                        setAlreadySubmitted(true);
+
+                        // 🔄 RE-POPULATE ANSWERS
+                        // Map the array from DB back to the object structure UI expects
+                        const prevSolutions = {};
+                        const prevQna = {};
+
+                        submission.solutions.forEach(sol => {
+                            prevSolutions[sol.questionId] = {
+                                code: sol.code,
+                                lang: sol.language
+                            };
+                            prevQna[sol.questionId] = sol.qna;
+                        });
+
+                        setSolutions(prevSolutions);
+                        setQnaMessages(prevQna);
+                    }
+                    setLoading(false);
+                }
+            }
+        };
+
+        loadWeekData();
+    }, [selectedWeek, allQuestions, user]);
 
     // --- HANDLERS ---
 
@@ -151,6 +194,13 @@ const LiveQuiz = () => {
             return;
         }
 
+        // Optional: Confirm resubmission if they already submitted
+        if (alreadySubmitted) {
+            if (!window.confirm("You have already submitted this week. Do you want to overwrite your previous answers?")) {
+                return;
+            }
+        }
+
         setIsSubmitting(true);
         setError('');
 
@@ -166,13 +216,13 @@ const LiveQuiz = () => {
 
             // Submit to Firebase
             await submitQuizWeek(
-                user.uid,
                 user.email,
                 selectedWeek,
                 formattedSolutions
             );
 
-            alert(`Success! Week ${selectedWeek} answers submitted.`);
+            const actionType = alreadySubmitted ? "updated" : "submitted";
+            alert(`Success! Week ${selectedWeek} answers ${actionType}.`);
             navigate('/leaderboard');
 
         } catch (err) {
@@ -206,12 +256,12 @@ const LiveQuiz = () => {
                             </button>
                         )}
                     </div>
+                    {/* ... (Header Controls and Title remain the same) ... */}
 
                     <h1 className="quiz-title">Live Coding Competition</h1>
 
-                    {/* Navigation Bar */}
                     <nav className="week-nav">
-                        {/* Sort weeks numerically for the display buttons */}
+                        {/* ... (Week navigation buttons remain the same) ... */}
                         {Object.keys(allQuestions)
                             .sort((a, b) => Number(a) - Number(b))
                             .map(week => (
@@ -229,41 +279,63 @@ const LiveQuiz = () => {
                         Select a week to view questions. The final question of each week is mandatory.
                     </p>
 
+                    {/* Error Message is OUTSIDE the questions container, so it won't affect colors */}
                     {error && <div className="quiz-error-message">{error}</div>}
 
-                    {/* Question List */}
-                    {currentQuestions.length > 0 ? (
-                        currentQuestions.map(question => {
-                            const solution = solutions[question.id] || { code: '', lang: 'javascript' };
-                            const qna = qnaMessages[question.id] || '';
-                            return (
-                                <QuestionAccordion
-                                    key={question.id}
-                                    question={question}
-                                    solution={solution}
-                                    onSolutionChange={handleSolutionChange}
-                                    qna={qna}
-                                    onQnaChange={handleQnaChange}
-                                    isOpen={openQuestionId === question.id}
-                                    onClick={() => handleToggle(question.id)}
-                                />
-                            );
-                        })
-                    ) : (
-                        <div style={{textAlign:'center', padding:'2rem', color:'#666'}}>
-                            No questions found for Week {selectedWeek}.
-                        </div>
-                    )}
+                    {/* 🛡️ FIX: Wrapper Div isolates questions so nth-child colors don't shift */}
+                    <div className="questions-container">
+                        {currentQuestions.length > 0 ? (
+                            currentQuestions.map(question => {
+                                const solution = solutions[question.id] || { code: '', lang: 'javascript' };
+                                const qna = qnaMessages[question.id] || '';
+                                return (
+                                    <QuestionAccordion
+                                        key={question.id}
+                                        question={question}
+                                        solution={solution}
+                                        onSolutionChange={handleSolutionChange}
+                                        qna={qna}
+                                        onQnaChange={handleQnaChange}
+                                        isOpen={openQuestionId === question.id}
+                                        onClick={() => handleToggle(question.id)}
+                                    />
+                                );
+                            })
+                        ) : (
+                            <div style={{textAlign:'center', padding:'2rem', color:'#666'}}>
+                                No questions found for Week {selectedWeek}.
+                            </div>
+                        )}
+                    </div>
 
                     {currentQuestions.length > 0 && (
-                        <button
-                            className="submit-quiz-button"
-                            onClick={handleSubmit}
-                            disabled={isSubmitting}
-                            style={{ opacity: isSubmitting ? 0.7 : 1 }}
-                        >
-                            {isSubmitting ? 'Submitting...' : `Submit Week ${selectedWeek} Answers`}
-                        </button>
+                        <div style={{ textAlign: 'center', marginTop: '2rem' }}>
+                            <button
+                                className="submit-quiz-button"
+                                onClick={handleSubmit}
+                                disabled={isSubmitting}
+                                style={{ opacity: isSubmitting ? 0.7 : 1, marginTop: 0 }} // Reset margin since container has it
+                            >
+                                {isSubmitting
+                                    ? 'Processing...'
+                                    : alreadySubmitted
+                                        ? `Update / Resubmit Week ${selectedWeek}`
+                                        : `Submit Week ${selectedWeek} Answers`
+                                }
+                            </button>
+
+                            {/* ✨ NEW: Informational Note for Resubmissions */}
+                            {alreadySubmitted && (
+                                <p style={{
+                                    fontSize: '0.85rem',
+                                    color: '#5f6368',
+                                    marginTop: '0.8rem',
+                                    fontStyle: 'italic'
+                                }}>
+                                    Note: Your latest submission will overwrite previous answers and be used for the final score.
+                                </p>
+                            )}
+                        </div>
                     )}
                 </div>
             </div>

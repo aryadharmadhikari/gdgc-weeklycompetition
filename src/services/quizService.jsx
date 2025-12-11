@@ -9,7 +9,8 @@ import {
     where,
     serverTimestamp,
     updateDoc,
-    increment
+    increment,
+    arrayUnion
 } from "firebase/firestore";
 
 // COLLECTION CONSTANTS
@@ -41,27 +42,45 @@ export const getQuizWeeks = async () => {
 /**
  * 📝 Submit Quiz Answers
  */
-export const submitQuizWeek = async (userId, userEmail, weekId, formattedSolutions) => {
+export const submitQuizWeek = async (userEmail, weekId, formattedSolutions) => {
     try {
-        const submissionId = `${userId}_${weekId}`;
-        const submissionRef = doc(db, SUBMISSIONS_COLLECTION, submissionId);
-        const userRef = doc(db, USERS_COLLECTION, userId);
+        // 1. Reference the Single User Submission Document
+        const userSubmissionRef = doc(db, SUBMISSIONS_COLLECTION, userEmail);
+        const userRef = doc(db, USERS_COLLECTION, userEmail);
 
-        const docSnap = await getDoc(submissionRef);
-        const isNewSubmission = !docSnap.exists();
+        // 2. Prepare the Payload using Nested Object Syntax
+        // We use computed property names [weekId] to target the specific week key
+        const payload = {
+            weeks: {
+                [weekId]: {
+                    solutions: formattedSolutions,
+                    status: 'submitted',
+                    submittedAt: serverTimestamp(),
+                }
+            }
+        };
 
-        await setDoc(submissionRef, {
-            userId,
-            userEmail,
-            weekId,
-            solutions: formattedSolutions,
-            status: 'submitted',
-            submittedAt: serverTimestamp(),
-        }, { merge: true });
+        // 3. Check if this is a NEW submission (for scoring)
+        // We need to read the doc first to see if this specific week key already exists
+        const docSnap = await getDoc(userSubmissionRef);
+        let isNewForScore = true;
 
-        if (isNewSubmission) {
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            // If weeks object exists AND this weekId exists inside it, it's an update, not new.
+            if (data.weeks && data.weeks[weekId]) {
+                isNewForScore = false;
+            }
+        }
+
+        // 4. Save to Firestore (Merge ensures we don't overwrite other weeks)
+        await setDoc(userSubmissionRef, payload, { merge: true });
+
+        // 5. Increment Score (Only if it's the first time submitting THIS week)
+        if (isNewForScore) {
             await updateDoc(userRef, {
-                questionsCompleted: increment(formattedSolutions.length)
+                questionsCompleted: increment(formattedSolutions.length),
+                completedWeeks: arrayUnion(weekId) // Keep this optimization!
             });
         }
 
@@ -73,24 +92,51 @@ export const submitQuizWeek = async (userId, userEmail, weekId, formattedSolutio
 };
 
 /**
- * ➕ Add New Week (Admin Only) -> [NEW FUNCTION]
- * Creates a new document in the 'weeks' collection.
+ *  Edit and Add new Quiz weeks
  */
-export const addQuizWeek = async (weekId, weekTitle, questions) => {
+// 1. Fetch ALL weeks (Drafts + Live) for the Admin Dashboard
+export const getAllQuizWeeksForAdmin = async () => {
     try {
-        // Document ID e.g., "week3"
+        const weeksRef = collection(db, WEEKS_COLLECTION);
+        // No 'where' clause here - we want everything
+        const snapshot = await getDocs(weeksRef);
+
+        const weeks = [];
+        snapshot.forEach(doc => {
+            weeks.push(doc.data());
+        });
+
+        // Sort by ID (numeric)
+        return weeks.sort((a, b) => Number(a.id) - Number(b.id));
+    } catch (error) {
+        console.error("Error fetching admin weeks:", error);
+        return [];
+    }
+};
+
+// 2. Helper to find the next available ID
+export const getNextWeekNumber = async () => {
+    const weeks = await getAllQuizWeeksForAdmin();
+    // Logic: Look at the last week's ID and add 1. If empty, start at 1.
+    if (weeks.length === 0) return 1;
+    const lastWeek = weeks[weeks.length - 1];
+    return Number(lastWeek.id) + 1;
+};
+
+// 3. Save Logic (Handles both Drafts and Live)
+export const addQuizWeek = async (weekId, weekTitle, questions, isVisible) => {
+    try {
         const weekDocId = `week${weekId}`;
         const weekRef = doc(db, WEEKS_COLLECTION, weekDocId);
 
-        // Save to Firestore
         await setDoc(weekRef, {
-            id: weekId,
-            title: weekTitle,
-            isVisible: true,
-            questions: questions // Array of question objects
+            id: weekId.toString(),
+            title: weekTitle, // e.g., "Week 4"
+            isVisible: isVisible,
+            questions: questions,
+            lastUpdated: serverTimestamp()
         });
 
-        console.log(`Week ${weekId} added to Firestore!`);
         return { success: true };
     } catch (error) {
         console.error("Error adding week:", error);
@@ -98,14 +144,24 @@ export const addQuizWeek = async (weekId, weekTitle, questions) => {
     }
 };
 
-// NEW FUNCTION: Calculates the next week number
-export const getNextWeekNumber = async () => {
+/**
+ * 🕵️‍♂️ Get User Submission (Refactored)
+ * Fetches the specific week from the user's single document.
+ */
+export const getUserSubmission = async (userEmail, weekId) => {
     try {
-        const querySnapshot = await getDocs(collection(db, "quizzes"));
-        // If there are 3 docs, size is 3. Next week is 4.
-        return querySnapshot.size + 1;
+        const docRef = doc(db, SUBMISSIONS_COLLECTION, userEmail);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            // Return only the specific week's data if it exists
+            return data.weeks ? data.weeks[weekId] : null;
+        } else {
+            return null;
+        }
     } catch (error) {
-        console.error("Error fetching week count:", error);
-        return 1; // Default to Week 1 if error or empty
+        console.error("Error checking submission:", error);
+        return null;
     }
 };

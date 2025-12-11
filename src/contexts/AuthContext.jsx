@@ -6,7 +6,7 @@ import {
     checkUserProfileExists,
     registerNewUser,
     logoutUser,
-    getUserProfile // <--- MAKE SURE THIS IS IMPORTED
+    getUserProfile
 } from "../services/authService";
 
 const AuthContext = createContext();
@@ -24,14 +24,21 @@ export const AuthProvider = ({ children }) => {
     // --- 1. SIGN IN FLOW ---
     const signIn = async () => {
         try {
+            // A. Google Login
             const googleUser = await loginWithGoogle();
-            const exists = await checkUserProfileExists(googleUser.uid);
+
+            // B. Check DB existence
+            // 🛑 CRITICAL FIX: Pass 'email', not 'uid'
+            const exists = await checkUserProfileExists(googleUser.email);
 
             if (exists) {
-                // [FIX] Fetch full profile (Role/Branch) before setting state
-                const profileData = await getUserProfile(googleUser.uid);
-                setUser({ ...googleUser, ...profileData });
+                // User exists -> Fetch Profile using EMAIL
+                const dbProfile = await getUserProfile(googleUser.email);
+
+                // Merge Google Data + Firestore Data
+                setUser({ ...googleUser, ...dbProfile });
             } else {
+                // User is new -> Show Modal
                 setPendingUser(googleUser);
                 setShowYearModal(true);
             }
@@ -45,9 +52,7 @@ export const AuthProvider = ({ children }) => {
         if (!pendingUser) return;
 
         try {
-            // Service returns the combined user object (Google + DB Data)
             const fullUser = await registerNewUser(pendingUser, selectedYear);
-
             setUser(fullUser);
             setShowYearModal(false);
             setPendingUser(null);
@@ -61,19 +66,29 @@ export const AuthProvider = ({ children }) => {
         return logoutUser();
     };
 
-    // --- 3. SESSION MONITOR ---
+    // --- 3. SESSION MONITOR (Runs on Refresh) ---
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             if (!showYearModal) {
-                if (currentUser && !currentUser.email.endsWith('@dbit.in')) {
-                    logoutUser();
-                    setUser(null);
-                } else if (currentUser) {
-                    // [FIX] Fetch Firestore Data on Page Refresh
-                    const profileData = await getUserProfile(currentUser.uid);
+                if (currentUser) {
+                    // Double check domain rule
+                    if (!currentUser.email.endsWith('@dbit.in')) {
+                        logoutUser();
+                        setUser(null);
+                    } else {
+                        // 🛑 CRITICAL FIX: Pass 'email' here too
+                        const dbProfile = await getUserProfile(currentUser.email);
 
-                    // Merge Google Data with Firestore Data (Role, Branch, Year)
-                    setUser({ ...currentUser, ...profileData });
+                        // If dbProfile is null (rare case where Auth exists but DB doesn't), handle gracefully
+                        if (dbProfile) {
+                            setUser({ ...currentUser, ...dbProfile });
+                        } else {
+                            // Edge case: User logged in via Firebase but deleted from DB manually
+                            // You might want to force logout here or show modal again
+                            // For now, we just set the basic user
+                            setUser(currentUser);
+                        }
+                    }
                 } else {
                     setUser(null);
                 }

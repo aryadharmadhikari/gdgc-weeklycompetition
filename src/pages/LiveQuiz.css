@@ -385,7 +385,6 @@ body {
     padding: 1rem;
     background: linear-gradient(90deg, #fbe9e7, #fce1de);
     color: var(--google-red);
-    border: 1px solid var(--google-red);
     border-left-width: 5px;
     border-radius: 8px;
     margin-bottom: 1.5rem;

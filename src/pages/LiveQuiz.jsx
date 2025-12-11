@@ -46,7 +46,7 @@ const QuestionAccordion = ({ question, solution, onSolutionChange, qna, onQnaCha
         </div>
         {isOpen && (
             <div className="question-body">
-                <p className="question-description">{question.description}</p>
+                <p className="question-prompt">{question.prompt}</p>
                 <TestCaseViewer testCases={question.testCases} />
                 <CodeEditor
                     code={solution.code} setCode={(c) => onSolutionChange(question.id, { ...solution, code: c })}

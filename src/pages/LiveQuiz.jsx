@@ -17,7 +17,7 @@ const CodeEditor = ({ code, setCode, lang, setLang }) => {
             <div className="editor-toolbar">
                 <label>Language:</label>
                 <select value={lang} onChange={(e) => setLang(e.target.value)} className="lang-select">
-                    {languages.map((l) => <option key={l} value={l}>{l.toUpperCase()}</option>)}
+                    {languages.map((l) => <option key={l} value={l}>{l.charAt(0).toUpperCase() + l.slice(1)}</option>)}
                 </select>
             </div>
             <textarea className="code-editor" value={code} onChange={(e) => setCode(e.target.value)} placeholder="Write your code here..." spellCheck="false" />
@@ -46,7 +46,7 @@ const QuestionAccordion = ({ question, solution, onSolutionChange, qna, onQnaCha
         </div>
         {isOpen && (
             <div className="question-body">
-                <p className="question-prompt">{question.prompt}</p>
+                <p className="question-prompt">{question.description || question.prompt || "No details provided."}</p>
                 <TestCaseViewer testCases={question.testCases} />
                 <CodeEditor
                     code={solution.code} setCode={(c) => onSolutionChange(question.id, { ...solution, code: c })}
@@ -57,7 +57,6 @@ const QuestionAccordion = ({ question, solution, onSolutionChange, qna, onQnaCha
         )}
     </div>
 );
-
 // --- MAIN COMPONENT ---
 const LiveQuiz = () => {
     const { user } = useAuth();

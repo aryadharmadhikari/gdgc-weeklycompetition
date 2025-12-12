@@ -3,19 +3,83 @@ import './AdminPanel.css';
 import { addQuizWeek, getNextWeekNumber, getAllQuizWeeksForAdmin } from '../services/quizService';
 import { refreshLeaderboardCache } from '../services/leaderboardService';
 
+// --- SUB-COMPONENT: Multi-Language Solution Input ---
+const SolutionInput = ({ solutions, onChange }) => {
+    // Local state to toggle views only
+    const [activeLang, setActiveLang] = useState('javascript');
+
+    const languages = [
+        { id: 'javascript', label: 'JS' },
+        { id: 'python', label: 'Python' },
+        { id: 'java', label: 'Java' },
+        { id: 'c', label: 'C' },
+        { id: 'cpp', label: 'C++' }
+    ];
+
+    const currentCode = solutions?.[activeLang] || '';
+
+    const handleCodeChange = (e) => {
+        // Create a copy of the solutions object and update the specific language
+        const updatedSolutions = {
+            ...solutions,
+            [activeLang]: e.target.value
+        };
+        onChange(updatedSolutions);
+    };
+
+    return (
+        <div style={{ marginTop: '10px', border: '1px solid #d0d5dd', borderRadius: '8px', overflow: 'hidden' }}>
+            {/* Language Tabs */}
+            <div style={{ display: 'flex', background: '#f8f9fa', borderBottom: '1px solid #d0d5dd' }}>
+                {languages.map(lang => (
+                    <button
+                        key={lang.id}
+                        type="button"
+                        onClick={() => setActiveLang(lang.id)}
+                        style={{
+                            flex: 1,
+                            padding: '8px',
+                            border: 'none',
+                            background: activeLang === lang.id ? '#fff' : 'transparent',
+                            color: activeLang === lang.id ? '#1a73e8' : '#666',
+                            fontWeight: activeLang === lang.id ? 'bold' : 'normal',
+                            borderBottom: activeLang === lang.id ? '2px solid #1a73e8' : 'none',
+                            cursor: 'pointer',
+                            fontSize: '0.85rem'
+                        }}
+                    >
+                        {lang.label}
+                    </button>
+                ))}
+            </div>
+
+            {/* Code Textarea */}
+            <textarea
+                className="code-input"
+                style={{ border: 'none', borderRadius: 0, borderTop: 'none' }}
+                rows={6}
+                placeholder={`Enter ${activeLang} solution here...`}
+                value={currentCode}
+                onChange={handleCodeChange}
+            />
+        </div>
+    );
+};
+
+// --- MAIN ADMIN COMPONENT ---
 const AdminPanel = ({ pageType, onClose }) => {
     // VIEW MODES: 'dashboard' (list of weeks) OR 'editor' (form)
     const [viewMode, setViewMode] = useState('dashboard');
     const [isLoading, setIsLoading] = useState(false);
 
     // DATA STATES
-    const [allWeeks, setAllWeeks] = useState([]); // List for dashboard
-    const [editingWeekNum, setEditingWeekNum] = useState(null); // The ID we are working on
+    const [allWeeks, setAllWeeks] = useState([]);
+    const [editingWeekNum, setEditingWeekNum] = useState(null);
 
     // FORM STATES
     const [questions, setQuestions] = useState([]);
 
-    // --- INITIALIZATION: Load Dashboard ---
+    // --- INITIALIZATION ---
     useEffect(() => {
         loadDashboard();
     }, []);
@@ -34,11 +98,11 @@ const AdminPanel = ({ pageType, onClose }) => {
         const nextNum = await getNextWeekNumber();
         setEditingWeekNum(nextNum);
 
-        // 🚀 DEFAULT TEMPLATE: 3 Empty Questions, Q3 is Master
+        // 🚀 DEFAULT TEMPLATE
         setQuestions([
-            { id: 1, title: 'Question 1', prompt: '', testCases: '', isMaster: false, isOpen: true },
-            { id: 2, title: 'Question 2', prompt: '', testCases: '', isMaster: false, isOpen: false },
-            { id: 3, title: 'Question 3', prompt: '', testCases: '', isMaster: true, isOpen: false } // Master Default
+            { id: 1, title: 'Question 1', prompt: '', testCases: '', isMaster: false, isOpen: true, solutionCode: {} },
+            { id: 2, title: 'Question 2', prompt: '', testCases: '', isMaster: false, isOpen: false, solutionCode: {} },
+            { id: 3, title: 'Question 3', prompt: '', testCases: '', isMaster: true, isOpen: false, solutionCode: {} }
         ]);
 
         setIsLoading(false);
@@ -49,12 +113,22 @@ const AdminPanel = ({ pageType, onClose }) => {
         setEditingWeekNum(weekData.id);
 
         // Parse database questions back to state
-        // Add 'isOpen' property for UI handling
-        const parsedQuestions = weekData.questions.map((q, idx) => ({
-            ...q,
-            testCases: Array.isArray(q.testCases) ? q.testCases.join('\n') : q.testCases, // Convert Array -> String for Textarea
-            isOpen: idx === 0 // Open first one by default
-        }));
+        const parsedQuestions = weekData.questions.map((q, idx) => {
+            // Handle legacy data where solutionCode might be a string
+            let safeSolutions = {};
+            if (typeof q.solutionCode === 'string') {
+                safeSolutions = { javascript: q.solutionCode }; // Default old strings to JS
+            } else {
+                safeSolutions = q.solutionCode || {};
+            }
+
+            return {
+                ...q,
+                testCases: Array.isArray(q.testCases) ? q.testCases.join('\n') : q.testCases,
+                solutionCode: safeSolutions, // Ensure object structure
+                isOpen: idx === 0
+            };
+        });
 
         setQuestions(parsedQuestions);
         setViewMode('editor');
@@ -74,7 +148,11 @@ const AdminPanel = ({ pageType, onClose }) => {
         const newQ = {
             id: Date.now(),
             title: `Question ${questions.length + 1}`,
-            prompt: '', testCases: '', isMaster: false, isOpen: true
+            prompt: '',
+            testCases: '',
+            isMaster: false,
+            isOpen: true,
+            solutionCode: {} // Initialize empty object for solutions
         };
         setQuestions(prev => [...prev.map(q => ({...q, isOpen: false})), newQ]);
     };
@@ -85,14 +163,15 @@ const AdminPanel = ({ pageType, onClose }) => {
     };
 
     const handleSave = async (isLive) => {
-        // 🛡️ VALIDATION: Check for at least one Master Question
+        // VALIDATION
         if (isLive) {
             const hasMaster = questions.some(q => q.isMaster);
             if (!hasMaster) {
-                alert("⚠️ Cannot Publish:\nYou must mark at least one question as the 'Master Question' (Mandatory) before publishing live.\n\nYou can still 'Save as Draft' if you aren't ready.");
-                return; // Stop the publish process
+                alert("⚠️ Cannot Publish:\nYou must mark at least one question as the 'Master Question' (Mandatory).");
+                return;
             }
         }
+
         setIsLoading(true);
         try {
             // 1. Format for Database
@@ -100,10 +179,10 @@ const AdminPanel = ({ pageType, onClose }) => {
                 id: `w${editingWeekNum}q${i+1}`,
                 title: q.title || `Question ${i+1}`,
                 prompt: q.prompt,
-                testCases: q.testCases.split('\n').filter(t => t.trim()), // String -> Array
+                testCases: q.testCases.split('\n').filter(t => t.trim()),
                 isMaster: q.isMaster,
-                // Include solution/explanation only if on Explanation page
-                solutionCode: pageType === 'Explanation' ? q.solutionCode : '',
+                // Pass the full multi-language object only if on Explanation page
+                solutionCode: pageType === 'Explanation' ? q.solutionCode : {},
                 explanation: pageType === 'Explanation' ? q.explanation : ''
             }));
 
@@ -112,7 +191,6 @@ const AdminPanel = ({ pageType, onClose }) => {
 
             alert(isLive ? `Week ${editingWeekNum} is now LIVE!` : `Week ${editingWeekNum} saved to Drafts.`);
 
-            // 3. Return to Dashboard
             await loadDashboard();
             setViewMode('dashboard');
 
@@ -128,14 +206,15 @@ const AdminPanel = ({ pageType, onClose }) => {
 
     const renderDashboard = () => (
         <div className="admin-modal-body">
-            <h3 style={{marginTop:0}}>Manage Content</h3>
+            <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'20px'}}>
+                <h3 style={{margin:0}}>Manage Content ({pageType})</h3>
+            </div>
+
             <div className="dashboard-grid">
-                {/* Create New Card */}
                 <button className="create-new-btn" onClick={handleCreateNew}>
                     <span style={{fontSize:'1.5rem'}}>+</span> Create Week {allWeeks.length + 1}
                 </button>
 
-                {/* Existing Weeks List */}
                 {allWeeks.map((week) => (
                     <div key={week.id} className="week-card" onClick={() => handleEditWeek(week)}>
                         <span className={`status-badge ${week.isVisible ? 'status-live' : 'status-draft'}`}>
@@ -177,7 +256,6 @@ const AdminPanel = ({ pageType, onClose }) => {
 
                         {q.isOpen && (
                             <div className="qb-body">
-                                {/* Master Toggle */}
                                 <div style={{marginBottom:'15px', padding:'10px', background:'#fff8e1', borderRadius:'6px', display:'flex', alignItems:'center', gap:'10px'}}>
                                     <input
                                         type="checkbox"
@@ -198,23 +276,35 @@ const AdminPanel = ({ pageType, onClose }) => {
                                 </div>
                                 <div className="input-group">
                                     <label>Test Cases (One per line)</label>
-                                    <textarea className="code" rows={3} value={q.testCases} onChange={e => updateQuestion(index, 'testCases', e.target.value)} />
+                                    <textarea className="code-input" rows={3} value={q.testCases} onChange={e => updateQuestion(index, 'testCases', e.target.value)} />
                                 </div>
 
+                                {/* 💡 CONDITIONAL FIELDS: Only show for Explanations Page */}
                                 {pageType === 'Explanation' && (
                                     <div style={{marginTop:'15px', paddingTop:'15px', borderTop:'1px dashed #ccc'}}>
                                         <div className="input-group">
-                                            <label>Solution Code</label>
-                                            <textarea className="code" value={q.solutionCode} onChange={e => updateQuestion(index, 'solutionCode', e.target.value)} />
+                                            <label style={{color:'#1a73e8'}}>Solution Code (Multi-Language)</label>
+
+                                            {/* ✨ NEW: Multi-Language Input Component */}
+                                            <SolutionInput
+                                                solutions={q.solutionCode}
+                                                onChange={(newSolutions) => updateQuestion(index, 'solutionCode', newSolutions)}
+                                            />
+
                                         </div>
-                                        <div className="input-group">
-                                            <label>Explanation Text</label>
-                                            <textarea value={q.explanation} onChange={e => updateQuestion(index, 'explanation', e.target.value)} />
+                                        <div className="input-group" style={{marginTop:'15px'}}>
+                                            <label style={{color:'#1a73e8'}}>Detailed Explanation Text</label>
+                                            <textarea
+                                                rows={4}
+                                                placeholder="Explain the logic here..."
+                                                value={q.explanation}
+                                                onChange={e => updateQuestion(index, 'explanation', e.target.value)}
+                                            />
                                         </div>
                                     </div>
                                 )}
 
-                                <button className="btn" style={{color:'red', fontSize:'0.8rem', padding:0}} onClick={() => removeQuestion(index)}>Delete Question</button>
+                                <button className="btn" style={{color:'red', fontSize:'0.8rem', padding:0, marginTop:'10px'}} onClick={() => removeQuestion(index)}>Delete Question</button>
                             </div>
                         )}
                     </div>

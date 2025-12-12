@@ -309,7 +309,7 @@ body {
 
 .code-editor {
     width: 100%;
-    min-height: 300px;
+    min-height: 500px;
     border: none;
     padding: 1rem;
     font-family: 'Roboto Mono', 'Menlo', 'Monaco', monospace;

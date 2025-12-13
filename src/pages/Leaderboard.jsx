@@ -3,6 +3,7 @@ import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
 import { gdgTheme } from '../theme/gdgctheme';
 import GoogleBrandLines from '../components/common/GoogleBrandLines';
+import GoogleOrbs from '../components/common/GoogleOrbs'; // Import your Orbs component
 import { getLeaderboardData } from '../services/leaderboardService.jsx';
 
 const Leaderboard = () => {
@@ -39,18 +40,27 @@ const Leaderboard = () => {
         }}>
             <Header />
 
-            {/* Page Header - PERFECTLY ALIGNED */}
+            {/* Page Header - UPDATED WITH ORBS */}
             <div style={{
                 backgroundColor: gdgTheme.colors.background.dark,
                 width: '100%',
-                padding: `${gdgTheme.spacing.xxl} 0`, // Only vertical padding on outer container
-                borderBottom: `1px solid ${gdgTheme.colors.neutral.lightGray}`
+                padding: `${gdgTheme.spacing.xxl} 0`,
+                borderBottom: `1px solid ${gdgTheme.colors.neutral.lightGray}`,
+                position: 'relative', // 1. Anchors the absolute orbs
+                overflow: 'hidden'    // 2. Crops the orbs to this section only
             }}>
+
+                {/* 3. Insert Orbs Here (Background Layer) */}
+                <GoogleOrbs />
+
+                {/* 4. Content Layer (Must be z-index > 0) */}
                 <div style={{
                     maxWidth: CONTAINER_MAX_WIDTH,
                     margin: '0 auto',
                     padding: `0 ${CONTAINER_PADDING}`,
-                    textAlign: 'center'
+                    textAlign: 'center',
+                    position: 'relative', // 5. Lift content above orbs
+                    zIndex: 1             // 6. Ensure interactivity and visibility
                 }}>
                     <GoogleBrandLines
                         variant="dynamic"
@@ -78,10 +88,10 @@ const Leaderboard = () => {
                 </div>
             </div>
 
-            {/* Leaderboard Content - PERFECTLY ALIGNED */}
+            {/* Leaderboard Content */}
             <div style={{
                 width: '100%',
-                padding: `${gdgTheme.spacing.xl} 0`, // Only vertical padding on outer container
+                padding: `${gdgTheme.spacing.xl} 0`,
                 flex: 1
             }}>
                 <div style={{
@@ -103,6 +113,8 @@ const Leaderboard = () => {
         </div>
     );
 };
+
+// ... (Rest of your components: LoadingState, ErrorState, LeaderboardTable, ParticipantRow remain unchanged) ...
 
 const LoadingState = () => (
     <div style={{
@@ -175,7 +187,7 @@ const LeaderboardTable = ({ data }) => (
         overflow: 'hidden',
         boxShadow: gdgTheme.shadows.medium,
         width: '100%',
-        margin: 0 // Ensure no extra margins
+        margin: 0
     }}>
         {/* Table Header */}
         <div style={{

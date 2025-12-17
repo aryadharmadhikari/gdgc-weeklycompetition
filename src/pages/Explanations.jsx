@@ -1,38 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import './LiveQuiz.css';
 import { useAuth } from '../contexts/AuthContext';
 import AdminPanel from '../Admin/AdminPanel';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
+import { getQuizWeeks } from '../services/quizService'; // Import the service
 
-// Keep all your existing data structure exactly as it is
-const allExplanations = {
-    '1': [
-        {
-            id: 'w1q1',
-            title: 'Question 1: FizzBuzz',
-            prompt: "Write a program that prints numbers from 1 to 100. For multiples of three print 'Fizz', for multiples of five print 'Buzz', and for multiples of both, print 'FizzBuzz'.",
-            isMaster: false,
-            testCases: ["Case 1: No input needed.", "Output: 1, 2, Fizz, 4, Buzz, Fizz, ..., 14, FizzBuzz, ..."],
-            solutionCode: "for (let i = 1; i <= 100; i++) {\n  if (i % 15 === 0) {\n    console.log('FizzBuzz');\n  } else if (i % 3 === 0) {\n    console.log('Fizz');\n  } else if (i % 5 === 0) {\n    console.log('Buzz');\n  } else {\n    console.log(i);\n  }\n}",
-            explanation: "This is a classic problem. The key is to check for multiples of 15 (both 3 and 5) first, before checking for multiples of 3 or 5 individually."
-        },
-    ],
-    '2': [
-        {
-            id: 'w2q1',
-            title: 'Question 1: Reverse a String',
-            prompt: 'Write a function that takes a string as input and returns the string reversed.',
-            isMaster: false,
-            testCases: ["Input: \"hello\"\nOutput: \"olleh\""],
-            solutionCode: "function reverseString(str) {\n  return str.split('').reverse().join('');\n}",
-            explanation: "This solution leverages built-in JavaScript methods. The .split('') method converts the string into an array of characters, .reverse() reverses the elements in that array, and .join('') merges them back into a single string."
-        },
-    ]
-};
-
-// Keep all your existing components as-is
+// --- Sub-components (Keep these as they are) ---
 const ReadOnlyCodeEditor = ({ code, lang }) => {
     const languages = ['javascript', 'python', 'java', 'c', 'cpp'];
     return (
@@ -47,7 +22,7 @@ const ReadOnlyCodeEditor = ({ code, lang }) => {
             </div>
             <textarea
                 className="code-editor"
-                value={code}
+                value={code || ''} // Handle nulls
                 readOnly
                 spellCheck="false"
             />
@@ -59,7 +34,7 @@ const TestCaseViewer = ({ testCases }) => (
     <div className="test-cases-wrapper">
         <h4 className="test-cases-title">Test Cases</h4>
         <div className="test-cases-content">
-            {testCases.map((testCase, index) => (
+            {(testCases || []).map((testCase, index) => (
                 <pre key={index} className="test-case">
                     {testCase}
                 </pre>
@@ -71,7 +46,7 @@ const TestCaseViewer = ({ testCases }) => (
 const ExplanationViewer = ({ text }) => (
     <div className="explanation-wrapper">
         <h4 className="explanation-title">Explanation</h4>
-        <p className="explanation-text">{text}</p>
+        <p className="explanation-text">{text || "No explanation provided yet."}</p>
     </div>
 );
 
@@ -85,30 +60,67 @@ const ExplanationAccordion = ({ question, isOpen, onClick }) => {
             {isOpen && (
                 <div className="question-body">
                     <p className="question-prompt">{question.prompt}</p>
-                    <TestCaseViewer testCases={question.testCases} />
-                    <ReadOnlyCodeEditor
-                        code={question.solutionCode}
-                        lang={question.solutionLang || 'javascript'}
-                    />
-                    <ExplanationViewer text={question.explanation} />
+                    {/* Ensure testCases is an array before passing */}
+                    <TestCaseViewer testCases={Array.isArray(question.testCases) ? question.testCases : []} />
+                    
+                    <div style={{marginTop: '20px', borderTop: '2px dashed #eee', paddingTop: '20px'}}>
+                        <h4 style={{color: '#1a73e8', marginBottom: '10px'}}>Official Solution</h4>
+                        <ReadOnlyCodeEditor
+                            code={question.solutionCode}
+                            lang={question.language || 'javascript'}
+                        />
+                        <ExplanationViewer text={question.explanation} />
+                    </div>
                 </div>
             )}
         </div>
     );
 };
 
+// --- Main Component ---
 const Explanations = () => {
-
-    const { user } = useAuth(); // ✅ This will now work with the updated import
+    const { user } = useAuth();
     const [showAdminPanel, setShowAdminPanel] = useState(false);
-    const [selectedWeek, setSelectedWeek] = useState(Object.keys(allExplanations)[0]);
+    
+    // Data States
+    const [allWeeks, setAllWeeks] = useState({});
+    const [selectedWeek, setSelectedWeek] = useState(null);
     const [openQuestionId, setOpenQuestionId] = useState(null);
+    const [loading, setLoading] = useState(true);
 
-    const currentQuestions = allExplanations[selectedWeek] || [];
+    // 1. Fetch Data from Firebase
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const data = await getQuizWeeks();
+                setAllWeeks(data);
+
+                // Default to latest week
+                const weekKeys = Object.keys(data);
+                if (weekKeys.length > 0) {
+                    const sortedWeeks = weekKeys.sort((a, b) => Number(b) - Number(a));
+                    setSelectedWeek(sortedWeeks[0]);
+                }
+            } catch (error) {
+                console.error("Error loading explanations:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+    }, []);
+
+    // Helper to get questions for render
+    const currentQuestions = (selectedWeek && allWeeks[selectedWeek]) 
+        ? (allWeeks[selectedWeek].questions || []) 
+        : [];
 
     const handleToggle = (questionId) => {
         setOpenQuestionId(prev => (prev === questionId ? null : questionId));
     };
+
+    if (loading) return <div style={{padding:'50px', textAlign:'center'}}>Loading Solutions...</div>;
 
     return (
         <>
@@ -125,18 +137,16 @@ const Explanations = () => {
 
                     <div className="quiz-header-controls">
                         <Link to="/" className="back-link">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                            </svg>
-                            <span>Back</span>
+                            <span>← Back</span>
                         </Link>
 
                         {user && user.role === 'admin' && (
                             <button
                                 className="admin-add-week-btn"
                                 onClick={() => setShowAdminPanel(true)}
+                                style={{backgroundColor: '#34a853'}} // Green color to distinguish
                             >
-                                + Add New Week
+                                + Manage Solutions
                             </button>
                         )}
                     </div>
@@ -144,7 +154,9 @@ const Explanations = () => {
                     <h1 className="quiz-title">Weekly Explanations</h1>
 
                     <nav className="week-nav">
-                        {Object.keys(allExplanations).map(week => (
+                        {Object.keys(allWeeks)
+                             .sort((a, b) => Number(a) - Number(b))
+                             .map(week => (
                             <button
                                 key={week}
                                 className={`week-nav-button ${selectedWeek === week ? 'active' : ''}`}
@@ -162,20 +174,25 @@ const Explanations = () => {
                         Select a week to view the official solutions and explanations.
                     </p>
 
-                    {currentQuestions.map(question => (
-                        <ExplanationAccordion
-                            key={question.id}
-                            question={question}
-                            isOpen={openQuestionId === question.id}
-                            onClick={() => handleToggle(question.id)}
-                        />
-                    ))}
+                    {currentQuestions.length > 0 ? (
+                        currentQuestions.map(question => (
+                            <ExplanationAccordion
+                                key={question.id}
+                                question={question}
+                                isOpen={openQuestionId === question.id}
+                                onClick={() => handleToggle(question.id)}
+                            />
+                        ))
+                    ) : (
+                        <div style={{textAlign:'center', color:'#666', marginTop:'30px'}}>
+                            No data found for Week {selectedWeek}.
+                        </div>
+                    )}
                 </div>
 
             </div>
             <Footer />
         </>
-
     );
 };
 

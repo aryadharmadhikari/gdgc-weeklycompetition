@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './AdminPanel.css';
-import { addQuizWeek, getNextWeekNumber, getAllQuizWeeksForAdmin } from '../services/quizService';
+import { addQuizWeek, getNextWeekNumber, getAllQuizWeeksForAdmin, deleteQuizWeek } from '../services/quizService';
 import { refreshLeaderboardCache } from '../services/leaderboardService';
 
 const AdminPanel = ({ pageType, onClose }) => {
@@ -36,13 +36,22 @@ const AdminPanel = ({ pageType, onClose }) => {
         ]);
 
         setIsLoading(false);
-        setStartDate(new Date().toISOString().split('T')[0]); 
+        // Default to current time, formatted for datetime-local (YYYY-MM-DDTHH:MM)
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        setStartDate(now.toISOString().slice(0, 16));
+        
         setViewMode('editor');
     };
 
     const handleEditWeek = (weekData) => {
         setEditingWeekNum(weekData.id);
-        setStartDate(weekData.startDate || ''); 
+        
+        if (weekData.startDate) {
+            setStartDate(weekData.startDate.slice(0, 16)); 
+        } else {
+            setStartDate('');
+        }
 
         const parsedQuestions = weekData.questions.map((q, idx) => ({
             ...q,
@@ -52,6 +61,26 @@ const AdminPanel = ({ pageType, onClose }) => {
 
         setQuestions(parsedQuestions);
         setViewMode('editor');
+    };
+
+    const handleDelete = async () => {
+        const confirmDelete = window.confirm(
+            `⚠️ DANGER ZONE ⚠️\n\nAre you sure you want to DELETE Week ${editingWeekNum}?\n\nThis will remove the questions permanently.`
+        );
+
+        if (confirmDelete) {
+            setIsLoading(true);
+            try {
+                await deleteQuizWeek(editingWeekNum);
+                alert(`Week ${editingWeekNum} deleted.`);
+                await loadDashboard();
+                setViewMode('dashboard');
+            } catch (err) {
+                alert("Failed to delete week.");
+            } finally {
+                setIsLoading(false);
+            }
+        }
     };
 
     const updateQuestion = (index, field, value) => {
@@ -80,7 +109,7 @@ const AdminPanel = ({ pageType, onClose }) => {
         if (isLive) {
             const hasMaster = questions.some(q => q.isMaster);
             if (!hasMaster) {
-                alert("⚠️ Cannot Publish:\nYou must mark at least one question as the 'Master Question' (Mandatory) before publishing live.\n\nYou can still 'Save as Draft' if you aren't ready.");
+                alert("⚠️ Cannot Publish:\nYou must mark at least one question as the 'Master Question' (Mandatory) before publishing live.");
                 return;
             }
         }
@@ -92,11 +121,14 @@ const AdminPanel = ({ pageType, onClose }) => {
                 prompt: q.prompt,
                 testCases: q.testCases.split('\n').filter(t => t.trim()), 
                 isMaster: q.isMaster,
-                solutionCode: pageType === 'Explanation' ? q.solutionCode : '',
-                explanation: pageType === 'Explanation' ? q.explanation : ''
+                // --- FIX STARTS HERE ---
+                // If pageType is 'Explanation', use the new input from state.
+                // If NOT (meaning we are on Quiz page), use the existing data (q.solutionCode) or fallback to empty.
+                solutionCode: pageType === 'Explanation' ? q.solutionCode : (q.solutionCode || ''),
+                explanation: pageType === 'Explanation' ? q.explanation : (q.explanation || '')
+                // --- FIX ENDS HERE ---
             }));
             
-            // --- FIX: Only call this ONCE ---
             await addQuizWeek(editingWeekNum, `Week ${editingWeekNum}`, formattedQuestions, isLive, startDate);
 
             alert(isLive ? `Week ${editingWeekNum} is now LIVE!` : `Week ${editingWeekNum} saved to Drafts.`);
@@ -140,18 +172,23 @@ const AdminPanel = ({ pageType, onClose }) => {
                         <span style={{ color: '#666', fontSize: '0.8rem', textTransform: 'uppercase', fontWeight: 'bold' }}>Editing</span>
                         <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1a73e8' }}>Week {editingWeekNum}</div>
                     </div>
-                    <button className="btn" style={{ border: '1px solid #ddd' }} onClick={() => setViewMode('dashboard')}>
-                        Cancel
-                    </button>
+                    <div style={{display: 'flex', gap: '10px'}}>
+                         <button className="btn" style={{ background: '#ffdddd', color: '#d93025', border: '1px solid #d93025' }} onClick={handleDelete}>
+                            🗑️ Delete Week
+                        </button>
+                        <button className="btn" style={{ border: '1px solid #ddd' }} onClick={() => setViewMode('dashboard')}>
+                            Cancel
+                        </button>
+                    </div>
                 </div>
                 
                 <div style={{ background: '#f1f3f4', padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
-                    <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>Competition Start Date (Locks automatically after 7 days)</label>
+                    <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>Competition Start Date & Time (Locks +7 Days from this time)</label>
                     <input
-                        type="date"
+                        type="datetime-local"
                         value={startDate}
                         onChange={(e) => setStartDate(e.target.value)}
-                        style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+                        style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }}
                     />
                 </div>
 
@@ -192,7 +229,6 @@ const AdminPanel = ({ pageType, onClose }) => {
                                     <label>Test Cases (One per line)</label>
                                     <textarea className="code" rows={3} value={q.testCases} onChange={e => updateQuestion(index, 'testCases', e.target.value)} />
                                 </div>
-
                                 {pageType === 'Explanation' && (
                                     <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px dashed #ccc' }}>
                                         <div className="input-group">
@@ -205,7 +241,6 @@ const AdminPanel = ({ pageType, onClose }) => {
                                         </div>
                                     </div>
                                 )}
-
                                 <button className="btn" style={{ color: 'red', fontSize: '0.8rem', padding: 0 }} onClick={() => removeQuestion(index)}>Delete Question</button>
                             </div>
                         )}

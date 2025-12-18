@@ -173,9 +173,9 @@ const AdminPanel = ({ pageType, onClose }) => {
                         <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1a73e8' }}>Week {editingWeekNum}</div>
                     </div>
                     <div style={{display: 'flex', gap: '10px'}}>
-                         <button className="btn" style={{ background: '#ffdddd', color: '#d93025', border: '1px solid #d93025' }} onClick={handleDelete}>
+                         {/* <button className="btn" style={{ background: '#ffdddd', color: '#d93025', border: '1px solid #d93025' }} onClick={handleDelete}>
                             🗑️ Delete Week
-                        </button>
+                        </button> */}
                         <button className="btn" style={{ border: '1px solid #ddd' }} onClick={() => setViewMode('dashboard')}>
                             Cancel
                         </button>

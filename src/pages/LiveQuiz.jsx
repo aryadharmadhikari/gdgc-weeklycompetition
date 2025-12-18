@@ -106,7 +106,7 @@ const LiveQuiz = () => {
                     const latestWeek = sortedWeeks[0];
 
                     setSelectedWeek(latestWeek);
-                    // --- FIX: Access .questions property because data is now the full object ---
+                    // Updated to access .questions
                     setCurrentQuestions(data[latestWeek].questions || []);
                 }
             } catch (err) {
@@ -123,7 +123,7 @@ const LiveQuiz = () => {
     // Update current questions when selected week changes
     useEffect(() => {
         if (selectedWeek && allQuestions[selectedWeek]) {
-            // --- FIX: Access .questions property ---
+            // Updated to access .questions
             setCurrentQuestions(allQuestions[selectedWeek].questions || []);
             setOpenQuestionId(null);
             setError('');
@@ -133,7 +133,6 @@ const LiveQuiz = () => {
     useEffect(() => {
         const loadWeekData = async () => {
             if (selectedWeek && allQuestions[selectedWeek]) {
-                // --- FIX: Access .questions property ---
                 setCurrentQuestions(allQuestions[selectedWeek].questions || []);
                 setOpenQuestionId(null);
                 setError('');
@@ -307,17 +306,17 @@ const LiveQuiz = () => {
 
                     {currentQuestions.length > 0 && (
                         <div style={{ textAlign: 'center', marginTop: '2rem' }}>
-                            {/* --- FIX: Display Expiry Info --- */}
+                            {/* --- DATE DISPLAY --- */}
                             {currentWeekData?.startDate && (
                                 <div style={{textAlign: 'center', marginBottom: '1rem', color: isExpired ? 'red' : 'green', fontWeight: 'bold'}}>
                                     {isExpired 
-                                        ? `Competition Closed (Ended ${new Date(new Date(currentWeekData.startDate).setDate(new Date(currentWeekData.startDate).getDate() + 7)).toLocaleDateString()})`
-                                        : `Ends on ${new Date(new Date(currentWeekData.startDate).setDate(new Date(currentWeekData.startDate).getDate() + 7)).toLocaleDateString()}`
+                                        ? `Competition Closed (Ended ${new Date(new Date(currentWeekData.startDate).setDate(new Date(currentWeekData.startDate).getDate() + 7)).toLocaleString([], {dateStyle: 'medium', timeStyle: 'short'})})`
+                                        : `Ends on ${new Date(new Date(currentWeekData.startDate).setDate(new Date(currentWeekData.startDate).getDate() + 7)).toLocaleString([], {dateStyle: 'medium', timeStyle: 'short'})}`
                                     }
                                 </div>
                             )}
 
-                            {/* --- FIX: Disable Button Logic --- */}
+                            {/* --- SUBMIT BUTTON --- */}
                             <button
                                 className="submit-quiz-button"
                                 onClick={handleSubmit}

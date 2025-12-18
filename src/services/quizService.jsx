@@ -5,6 +5,7 @@ import {
     setDoc,
     getDoc,
     getDocs,
+    deleteDoc,
     query,
     where,
     serverTimestamp,
@@ -20,6 +21,7 @@ const USERS_COLLECTION = "users";
 
 /**
  * 🔍 Fetch Quiz Questions
+ * Returns the FULL object (including startDate) so the frontend can check expiry.
  */
 export const getQuizWeeks = async () => {
     try {
@@ -30,8 +32,7 @@ export const getQuizWeeks = async () => {
         const weeksData = {};
         snapshot.forEach(doc => {
             const data = doc.data();
-            // --- FIX: Return the FULL object, not just questions ---
-            weeksData[data.id] = data; 
+            weeksData[data.id] = data; // Return full object
         });
         return weeksData;
     } catch (error) {
@@ -42,6 +43,7 @@ export const getQuizWeeks = async () => {
 
 /**
  * 📝 Submit Quiz Answers
+ * Includes security check for deadline.
  */
 export const submitQuizWeek = async (userEmail, weekId, formattedSolutions) => {
     try {
@@ -64,11 +66,11 @@ export const submitQuizWeek = async (userEmail, weekId, formattedSolutions) => {
             }
         }
         
-        // 1. Reference the Single User Submission Document
+        // 2. Reference the Single User Submission Document
         const userSubmissionRef = doc(db, SUBMISSIONS_COLLECTION, userEmail);
         const userRef = doc(db, USERS_COLLECTION, userEmail);
 
-        // 2. Prepare the Payload using Nested Object Syntax
+        // 3. Prepare the Payload
         const payload = {
             weeks: {
                 [weekId]: {
@@ -79,7 +81,7 @@ export const submitQuizWeek = async (userEmail, weekId, formattedSolutions) => {
             }
         };
 
-        // 3. Check if this is a NEW submission (for scoring)
+        // 4. Check if this is a NEW submission (for scoring)
         const docSnap = await getDoc(userSubmissionRef);
         let isNewForScore = true;
 
@@ -90,10 +92,10 @@ export const submitQuizWeek = async (userEmail, weekId, formattedSolutions) => {
             }
         }
 
-        // 4. Save to Firestore
+        // 5. Save to Firestore
         await setDoc(userSubmissionRef, payload, { merge: true });
 
-        // 5. Increment Score
+        // 6. Increment Score
         if (isNewForScore) {
             await updateDoc(userRef, {
                 questionsCompleted: increment(formattedSolutions.length),
@@ -135,7 +137,7 @@ export const getNextWeekNumber = async () => {
     return Number(lastWeek.id) + 1;
 };
 
-// Change the signature to accept startDate
+// Updated to accept startDate
 export const addQuizWeek = async (weekId, weekTitle, questions, isVisible, startDate) => {
     try {
         const weekDocId = `week${weekId}`;
@@ -153,6 +155,22 @@ export const addQuizWeek = async (weekId, weekTitle, questions, isVisible, start
         return { success: true };
     } catch (error) {
         console.error("Error adding week:", error);
+        throw error;
+    }
+};
+
+/**
+ * 🗑️ Delete a Quiz Week
+ */
+export const deleteQuizWeek = async (weekId) => {
+    try {
+        const weekDocId = `week${weekId}`;
+        const weekRef = doc(db, WEEKS_COLLECTION, weekDocId);
+        
+        await deleteDoc(weekRef);
+        return { success: true };
+    } catch (error) {
+        console.error("Error deleting week:", error);
         throw error;
     }
 };

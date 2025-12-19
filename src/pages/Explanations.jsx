@@ -1,18 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import './LiveQuiz.css'; // 👈 Uses the same professional UI styles
+import './LiveQuiz.css';
 import { useAuth } from '../contexts/AuthContext';
 import AdminPanel from '../Admin/AdminPanel';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
-import { getQuizWeeks } from '../services/quizService'; // Import the service
-
-// 🔌 IMPORT REAL SERVICES
-import { getQuizWeeks } from '../services/quizService';
+import { getQuizWeeks } from '../services/quizService'; // We will define this file below
 
 // --- COMPONENT: Read-Only Code Editor ---
 const ReadOnlyCodeEditor = ({ solutions }) => {
-    // State to handle language switching
     const [viewLang, setViewLang] = useState('javascript');
 
     const languages = [
@@ -23,15 +19,13 @@ const ReadOnlyCodeEditor = ({ solutions }) => {
         { id: 'cpp', label: 'C++' }
     ];
 
-    // 🛡️ Logic to handle both Old Data (String) and New Data (Object)
     let displayCode = "// Solution not available.";
 
     if (typeof solutions === 'string') {
-        // Legacy/Simple: If database has just a string, show it.
         displayCode = solutions;
     } else if (solutions && typeof solutions === 'object') {
-        // Modern: If database has multi-lang object, show selected lang.
-        displayCode = solutions[viewLang] || solutions['javascript'] || "// No code provided.";
+        // Fallback to JS if specific lang missing, or show specific message
+        displayCode = solutions[viewLang] || solutions['javascript'] || "// No code provided for this language.";
     }
 
     return (
@@ -49,9 +43,10 @@ const ReadOnlyCodeEditor = ({ solutions }) => {
                     ))}
                 </select>
             </div>
+            {/* 🔴 FIX: Changed 'code' to 'displayCode' */}
             <textarea
                 className="code-editor"
-                value={code || ''} // Handle nulls
+                value={displayCode || ''}
                 readOnly
                 spellCheck="false"
             />
@@ -64,8 +59,7 @@ const TestCaseViewer = ({ testCases }) => (
     <div className="test-cases-wrapper">
         <h4 className="test-cases-title">Test Cases</h4>
         <div className="test-cases-content">
-            {/* Handle both Array (New) and String (Old) formats safely */}
-            {(Array.isArray(testCases) ? testCases : [testCases]).map((testCase, index) => (
+            {(Array.isArray(testCases) ? testCases : [testCases || "No test cases provided."]).map((testCase, index) => (
                 <pre key={index} className="test-case">
                     {testCase}
                 </pre>
@@ -90,8 +84,6 @@ const ExplanationViewer = ({ text }) => (
 const ExplanationAccordion = ({ question, isOpen, onClick }) => {
     return (
         <div className={`question-card ${question.isMaster ? 'master-question' : ''}`}>
-
-            {/* Header */}
             <div className="question-header" onClick={onClick}>
                 <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
                     <h3 style={{margin:0}}>{question.title}</h3>
@@ -104,15 +96,13 @@ const ExplanationAccordion = ({ question, isOpen, onClick }) => {
 
             {isOpen && (
                 <div className="question-body">
-
-                    {/* Professional UI: Problem Statement */}
                     <div className="prompt-container">
                         <p className="question-prompt">{question.description || question.prompt || "No details provided."}</p>
                     </div>
 
                     <TestCaseViewer testCases={question.testCases} />
 
-                    {/* Solution Viewer: Passes data dynamically */}
+                    {/* Passes the solutionCode object/string from DB to the editor */}
                     <ReadOnlyCodeEditor solutions={question.solutionCode} />
 
                     <ExplanationViewer text={question.explanation} />
@@ -126,23 +116,21 @@ const ExplanationAccordion = ({ question, isOpen, onClick }) => {
 const Explanations = () => {
     const { user } = useAuth();
     const [showAdminPanel, setShowAdminPanel] = useState(false);
-
-    // 1. STATE: Store Real Data from Firebase
     const [allData, setAllData] = useState({});
     const [selectedWeek, setSelectedWeek] = useState(null);
     const [openQuestionId, setOpenQuestionId] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    // 2. FETCH DATA: Load from Firestore on Mount
     const fetchData = async () => {
         setLoading(true);
         try {
+            // Fetches data grouped by week
             const data = await getQuizWeeks();
             setAllData(data);
 
-            // Auto-select the latest week if available
             const weekKeys = Object.keys(data);
             if (weekKeys.length > 0 && !selectedWeek) {
+                // Default to the highest week number
                 const sortedWeeks = weekKeys.sort((a, b) => Number(b) - Number(a));
                 setSelectedWeek(sortedWeeks[0]);
             }
@@ -157,44 +145,43 @@ const Explanations = () => {
         fetchData();
     }, []);
 
-    // 3. REFRESH HANDLER: Called when Admin Panel closes
     const handleAdminClose = () => {
         setShowAdminPanel(false);
-        fetchData(); // 🔄 Re-fetch data to show new edits immediately
+        fetchData();
     };
 
-    const currentQuestions = allData[selectedWeek] || [];
+    const currentQuestions = allData[selectedWeek]?.questions || [];
 
     const handleToggle = (questionId) => {
         setOpenQuestionId(prev => (prev === questionId ? null : questionId));
     };
 
-    if (loading && !selectedWeek) return <div style={{padding:'2rem', textAlign:'center'}}>Loading Solutions...</div>;
+    console.log("Selected Week:", selectedWeek);
+    console.log("Week Data Object:", allData[selectedWeek]);
+    console.log("Questions Array:", currentQuestions);
 
     return (
         <>
             <Header />
             <div className="quiz-page-container">
                 <div className="quiz-content">
-
-                    {/* 🛡️ ADMIN PANEL INTEGRATION */}
                     {showAdminPanel && (
                         <AdminPanel
-                            pageType="Explanation" // 👈 This tells AdminPanel to show Solution/Explanation fields
+                            pageType="Explanation"
                             onClose={handleAdminClose}
                         />
                     )}
 
                     <div className="quiz-header-controls">
                         <Link to="/" className="back-link">
-                            <span>← Back to Dashboard</span>
+                            <span>← Back</span>
                         </Link>
 
                         {user && user.role === 'admin' && (
                             <button
                                 className="admin-add-week-btn"
                                 onClick={() => setShowAdminPanel(true)}
-                                style={{backgroundColor: '#34a853'}} // Green color to distinguish
+                                style={{backgroundColor: '#34a853'}}
                             >
                                 + Manage Solutions
                             </button>
@@ -203,10 +190,9 @@ const Explanations = () => {
 
                     <h1 className="quiz-title">Solution Archive</h1>
 
-                    {/* Navigation */}
                     <nav className="week-nav">
                         {Object.keys(allData)
-                            .sort((a, b) => Number(a) - Number(b)) // Sort logic: 1, 2, 3...
+                            .sort((a, b) => Number(a) - Number(b))
                             .map(week => (
                                 <button
                                     key={week}
@@ -225,9 +211,10 @@ const Explanations = () => {
                         Select a week below to view official solutions and detailed explanations.
                     </p>
 
-                    {/* Content List */}
                     <div className="questions-container">
-                        {currentQuestions.length > 0 ? (
+                        {loading ? (
+                            <div style={{textAlign:'center', padding:'3rem'}}>Loading...</div>
+                        ) : currentQuestions.length > 0 ? (
                             currentQuestions.map(question => (
                                 <ExplanationAccordion
                                     key={question.id}
@@ -238,7 +225,7 @@ const Explanations = () => {
                             ))
                         ) : (
                             <div style={{textAlign:'center', padding:'3rem', color:'#666'}}>
-                                No solutions published for Week {selectedWeek} yet.
+                                No solutions found for Week {selectedWeek}.
                             </div>
                         )}
                     </div>

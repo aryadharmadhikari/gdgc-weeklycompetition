@@ -320,11 +320,7 @@ const LiveQuiz = () => {
                             <button
                                 className="submit-quiz-button"
                                 onClick={handleSubmit}
-                                disabled={isSubmitting || isExpired} 
-                                style={{ 
-                                    opacity: (isSubmitting || isExpired) ? 0.7 : 1, 
-                                    cursor: isExpired ? 'not-allowed' : 'pointer',
-                                    backgroundColor: isExpired ? '#999' : '#1a73e8',
+',
                                     marginTop: 0 
                                 }} 
                             >

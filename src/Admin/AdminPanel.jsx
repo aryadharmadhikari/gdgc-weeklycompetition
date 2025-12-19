@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './AdminPanel.css';
-import { addQuizWeek, getNextWeekNumber, getAllQuizWeeksForAdmin } from '../services/quizService';
+import { addQuizWeek, getNextWeekNumber, getAllQuizWeeksForAdmin, deleteQuizWeek } from '../services/quizService';
 import { refreshLeaderboardCache } from '../services/leaderboardService';
 
 // --- SUB-COMPONENT: Multi-Language Solution Input ---
@@ -68,7 +68,6 @@ const SolutionInput = ({ solutions, onChange }) => {
 
 // --- MAIN ADMIN COMPONENT ---
 const AdminPanel = ({ pageType, onClose }) => {
-    // VIEW MODES: 'dashboard' (list of weeks) OR 'editor' (form)
     const [viewMode, setViewMode] = useState('dashboard');
     const [isLoading, setIsLoading] = useState(false);
 
@@ -76,8 +75,8 @@ const AdminPanel = ({ pageType, onClose }) => {
     const [allWeeks, setAllWeeks] = useState([]);
     const [editingWeekNum, setEditingWeekNum] = useState(null);
 
-    // FORM STATES
     const [questions, setQuestions] = useState([]);
+    const [startDate, setStartDate] = useState('');
 
     // --- INITIALIZATION ---
     useEffect(() => {
@@ -90,8 +89,6 @@ const AdminPanel = ({ pageType, onClose }) => {
         setAllWeeks(weeks);
         setIsLoading(false);
     };
-
-    // --- NAVIGATION HANDLERS ---
 
     const handleCreateNew = async () => {
         setIsLoading(true);
@@ -106,11 +103,22 @@ const AdminPanel = ({ pageType, onClose }) => {
         ]);
 
         setIsLoading(false);
+        // Default to current time, formatted for datetime-local (YYYY-MM-DDTHH:MM)
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        setStartDate(now.toISOString().slice(0, 16));
+        
         setViewMode('editor');
     };
 
     const handleEditWeek = (weekData) => {
         setEditingWeekNum(weekData.id);
+        
+        if (weekData.startDate) {
+            setStartDate(weekData.startDate.slice(0, 16)); 
+        } else {
+            setStartDate('');
+        }
 
         // Parse database questions back to state
         const parsedQuestions = weekData.questions.map((q, idx) => {
@@ -134,7 +142,25 @@ const AdminPanel = ({ pageType, onClose }) => {
         setViewMode('editor');
     };
 
-    // --- EDITOR HANDLERS ---
+    const handleDelete = async () => {
+        const confirmDelete = window.confirm(
+            `⚠️ DANGER ZONE ⚠️\n\nAre you sure you want to DELETE Week ${editingWeekNum}?\n\nThis will remove the questions permanently.`
+        );
+
+        if (confirmDelete) {
+            setIsLoading(true);
+            try {
+                await deleteQuizWeek(editingWeekNum);
+                alert(`Week ${editingWeekNum} deleted.`);
+                await loadDashboard();
+                setViewMode('dashboard');
+            } catch (err) {
+                alert("Failed to delete week.");
+            } finally {
+                setIsLoading(false);
+            }
+        }
+    };
 
     const updateQuestion = (index, field, value) => {
         setQuestions(prev => prev.map((q, i) => i === index ? { ...q, [field]: value } : q));
@@ -154,11 +180,11 @@ const AdminPanel = ({ pageType, onClose }) => {
             isOpen: true,
             solutionCode: {} // Initialize empty object for solutions
         };
-        setQuestions(prev => [...prev.map(q => ({...q, isOpen: false})), newQ]);
+        setQuestions(prev => [...prev.map(q => ({ ...q, isOpen: false })), newQ]);
     };
 
     const removeQuestion = (index) => {
-        if(questions.length <= 1) return alert("Keep at least one question.");
+        if (questions.length <= 1) return alert("Keep at least one question.");
         setQuestions(prev => prev.filter((_, i) => i !== index));
     };
 
@@ -174,10 +200,9 @@ const AdminPanel = ({ pageType, onClose }) => {
 
         setIsLoading(true);
         try {
-            // 1. Format for Database
             const formattedQuestions = questions.map((q, i) => ({
-                id: `w${editingWeekNum}q${i+1}`,
-                title: q.title || `Question ${i+1}`,
+                id: `w${editingWeekNum}q${i + 1}`,
+                title: q.title || `Question ${i + 1}`,
                 prompt: q.prompt,
                 testCases: q.testCases.split('\n').filter(t => t.trim()),
                 isMaster: q.isMaster,
@@ -185,9 +210,8 @@ const AdminPanel = ({ pageType, onClose }) => {
                 solutionCode: pageType === 'Explanation' ? q.solutionCode : {},
                 explanation: pageType === 'Explanation' ? q.explanation : ''
             }));
-
-            // 2. Save
-            await addQuizWeek(editingWeekNum, `Week ${editingWeekNum}`, formattedQuestions, isLive);
+            
+            await addQuizWeek(editingWeekNum, `Week ${editingWeekNum}`, formattedQuestions, isLive, startDate);
 
             alert(isLive ? `Week ${editingWeekNum} is now LIVE!` : `Week ${editingWeekNum} saved to Drafts.`);
 
@@ -202,8 +226,6 @@ const AdminPanel = ({ pageType, onClose }) => {
         }
     };
 
-    // --- RENDER HELPERS ---
-
     const renderDashboard = () => (
         <div className="admin-modal-body">
             <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'20px'}}>
@@ -212,7 +234,7 @@ const AdminPanel = ({ pageType, onClose }) => {
 
             <div className="dashboard-grid">
                 <button className="create-new-btn" onClick={handleCreateNew}>
-                    <span style={{fontSize:'1.5rem'}}>+</span> Create Week {allWeeks.length + 1}
+                    <span style={{ fontSize: '1.5rem' }}>+</span> Create Week {allWeeks.length + 1}
                 </button>
 
                 {allWeeks.map((week) => (
@@ -233,12 +255,27 @@ const AdminPanel = ({ pageType, onClose }) => {
             <div className="admin-modal-body">
                 <div className="editor-toolbar">
                     <div>
-                        <span style={{color:'#666', fontSize:'0.8rem', textTransform:'uppercase', fontWeight:'bold'}}>Editing</span>
-                        <div style={{fontSize:'1.5rem', fontWeight:'bold', color:'#1a73e8'}}>Week {editingWeekNum}</div>
+                        <span style={{ color: '#666', fontSize: '0.8rem', textTransform: 'uppercase', fontWeight: 'bold' }}>Editing</span>
+                        <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1a73e8' }}>Week {editingWeekNum}</div>
                     </div>
-                    <button className="btn" style={{border:'1px solid #ddd'}} onClick={() => setViewMode('dashboard')}>
-                        Cancel
-                    </button>
+                    <div style={{display: 'flex', gap: '10px'}}>
+                         {/* <button className="btn" style={{ background: '#ffdddd', color: '#d93025', border: '1px solid #d93025' }} onClick={handleDelete}>
+                            🗑️ Delete Week
+                        </button> */}
+                        <button className="btn" style={{ border: '1px solid #ddd' }} onClick={() => setViewMode('dashboard')}>
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+                
+                <div style={{ background: '#f1f3f4', padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
+                    <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>Competition Start Date & Time (Locks +7 Days from this time)</label>
+                    <input
+                        type="datetime-local"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }}
+                    />
                 </div>
 
                 {questions.map((q, index) => (
@@ -248,8 +285,8 @@ const AdminPanel = ({ pageType, onClose }) => {
                                 {q.isMaster && "⭐ "}
                                 {q.title || `Question ${index + 1}`}
                             </span>
-                            <div style={{display:'flex', gap:'10px', alignItems:'center'}}>
-                                {q.isMaster && <span style={{fontSize:'0.7rem', color:'#fbbc04', fontWeight:'bold'}}>MASTER</span>}
+                            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                                {q.isMaster && <span style={{ fontSize: '0.7rem', color: '#fbbc04', fontWeight: 'bold' }}>MASTER</span>}
                                 {q.isOpen ? '▼' : '▶'}
                             </div>
                         </div>
@@ -261,9 +298,9 @@ const AdminPanel = ({ pageType, onClose }) => {
                                         type="checkbox"
                                         checked={q.isMaster}
                                         onChange={(e) => updateQuestion(index, 'isMaster', e.target.checked)}
-                                        style={{width:'auto'}}
+                                        style={{ width: 'auto' }}
                                     />
-                                    <label style={{margin:0, color:'#b36b00', cursor:'pointer'}}>Mark as Master Question (Mandatory)</label>
+                                    <label style={{ margin: 0, color: '#b36b00', cursor: 'pointer' }}>Mark as Master Question (Mandatory)</label>
                                 </div>
 
                                 <div className="input-group">
@@ -281,7 +318,7 @@ const AdminPanel = ({ pageType, onClose }) => {
 
                                 {/* 💡 CONDITIONAL FIELDS: Only show for Explanations Page */}
                                 {pageType === 'Explanation' && (
-                                    <div style={{marginTop:'15px', paddingTop:'15px', borderTop:'1px dashed #ccc'}}>
+                                    <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px dashed #ccc' }}>
                                         <div className="input-group">
                                             <label style={{color:'#1a73e8'}}>Solution Code (Multi-Language)</label>
 
@@ -317,9 +354,9 @@ const AdminPanel = ({ pageType, onClose }) => {
                 <button className="btn btn-save" onClick={() => handleSave(false)} disabled={isLoading}>
                     {isLoading ? 'Saving...' : 'Save as Draft'}
                 </button>
-                <div style={{display:'flex', gap:'10px'}}>
-                    <button className="btn" style={{background:'#fbbc04', color:'#000'}} onClick={async () => {
-                        if(window.confirm("Refresh Leaderboard?")) {
+                <div style={{ display: 'flex', gap: '10px' }}>
+                    <button className="btn" style={{ background: '#fbbc04', color: '#000' }} onClick={async () => {
+                        if (window.confirm("Refresh Leaderboard?")) {
                             await refreshLeaderboardCache();
                             alert("Done");
                         }
@@ -339,7 +376,7 @@ const AdminPanel = ({ pageType, onClose }) => {
             <div className="admin-modal-content">
                 <div className="admin-modal-header">
                     <h2>Admin Console</h2>
-                    <button onClick={onClose} style={{border:'none', background:'none', fontSize:'1.5rem', cursor:'pointer'}}>&times;</button>
+                    <button onClick={onClose} style={{ border: 'none', background: 'none', fontSize: '1.5rem', cursor: 'pointer' }}>&times;</button>
                 </div>
                 {viewMode === 'dashboard' ? renderDashboard() : renderEditor()}
             </div>

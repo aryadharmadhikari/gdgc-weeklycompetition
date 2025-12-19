@@ -6,10 +6,19 @@ import AdminPanel from '../Admin/AdminPanel';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
 
-// IMPORT SERVICES
 import { getQuizWeeks, submitQuizWeek, getUserSubmission} from '../services/quizService';
 
-// --- Child Components (Keep these exactly as they were) ---
+// --- HELPER FUNCTION ---
+const isWeekExpired = (weekData) => {
+    if (!weekData || !weekData.startDate) return false; 
+    
+    const start = new Date(weekData.startDate);
+    const deadline = new Date(start);
+    deadline.setDate(start.getDate() + 7); 
+    
+    return new Date() > deadline;
+};
+
 const CodeEditor = ({ code, setCode, lang, setLang }) => {
     const languages = ['javascript', 'python', 'java', 'c', 'c++'];
     return (
@@ -57,52 +66,48 @@ const QuestionAccordion = ({ question, solution, onSolutionChange, qna, onQnaCha
         )}
     </div>
 );
+
 // --- MAIN COMPONENT ---
 const LiveQuiz = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
 
-    // UI States
     const [showAdminPanel, setShowAdminPanel] = useState(false);
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
 
-    // Data States
-    const [allQuestions, setAllQuestions] = useState({}); // Stores all fetched weeks
+    const [allQuestions, setAllQuestions] = useState({}); 
     const [selectedWeek, setSelectedWeek] = useState(null);
     const [currentQuestions, setCurrentQuestions] = useState([]);
     const [alreadySubmitted, setAlreadySubmitted] = useState(false);
 
-    // User Input States
     const [openQuestionId, setOpenQuestionId] = useState(null);
     const [solutions, setSolutions] = useState({});
     const [qnaMessages, setQnaMessages] = useState({});
 
-
-    // 1. AUTH CHECK: Redirect if not signed in
+    // 1. AUTH CHECK
     useEffect(() => {
         if (!user && !loading) {
             navigate('/');
         }
     }, [user, loading, navigate]);
 
-    // 2. DATA FETCHING: Load Weeks and Set Latest
+    // 2. DATA FETCHING
     useEffect(() => {
         const fetchWeeks = async () => {
             try {
                 const data = await getQuizWeeks();
                 setAllQuestions(data);
 
-                // LOGIC TO SELECT MOST RECENT WEEK
                 const weekKeys = Object.keys(data);
                 if (weekKeys.length > 0) {
-                    // Sort keys numerically in descending order (e.g., [3, 2, 1])
                     const sortedWeeks = weekKeys.sort((a, b) => Number(b) - Number(a));
                     const latestWeek = sortedWeeks[0];
 
                     setSelectedWeek(latestWeek);
-                    setCurrentQuestions(data[latestWeek]);
+                    // Updated to access .questions
+                    setCurrentQuestions(data[latestWeek].questions || []);
                 }
             } catch (err) {
                 console.error("Failed to load quiz data", err);
@@ -115,10 +120,11 @@ const LiveQuiz = () => {
         if (user) fetchWeeks();
     }, [user]);
 
-    // Update current questions when selected week changes manually
+    // Update current questions when selected week changes
     useEffect(() => {
         if (selectedWeek && allQuestions[selectedWeek]) {
-            setCurrentQuestions(allQuestions[selectedWeek]);
+            // Updated to access .questions
+            setCurrentQuestions(allQuestions[selectedWeek].questions || []);
             setOpenQuestionId(null);
             setError('');
         }
@@ -127,24 +133,20 @@ const LiveQuiz = () => {
     useEffect(() => {
         const loadWeekData = async () => {
             if (selectedWeek && allQuestions[selectedWeek]) {
-                setCurrentQuestions(allQuestions[selectedWeek]);
+                setCurrentQuestions(allQuestions[selectedWeek].questions || []);
                 setOpenQuestionId(null);
                 setError('');
 
-                // Reset states
                 setAlreadySubmitted(false);
                 setSolutions({});
                 setQnaMessages({});
 
                 if (user) {
-                    setLoading(true); // Short load state for checking submission
+                    setLoading(true); 
                     const submission = await getUserSubmission(user.email, selectedWeek);
 
                     if (submission) {
                         setAlreadySubmitted(true);
-
-                        // 🔄 RE-POPULATE ANSWERS
-                        // Map the array from DB back to the object structure UI expects
                         const prevSolutions = {};
                         const prevQna = {};
 
@@ -167,8 +169,6 @@ const LiveQuiz = () => {
         loadWeekData();
     }, [selectedWeek, allQuestions, user]);
 
-    // --- HANDLERS ---
-
     const handleSolutionChange = (questionId, newSolution) => {
         setSolutions(prev => ({ ...prev, [questionId]: newSolution }));
     };
@@ -184,7 +184,6 @@ const LiveQuiz = () => {
     const handleSubmit = async () => {
         if (!user) return;
 
-        // Validation
         const masterQuestion = currentQuestions.find(q => q.isMaster);
         const masterSolution = solutions[masterQuestion?.id]?.code || '';
 
@@ -194,7 +193,6 @@ const LiveQuiz = () => {
             return;
         }
 
-        // Optional: Confirm resubmission if they already submitted
         if (alreadySubmitted) {
             if (!window.confirm("You have already submitted this week. Do you want to overwrite your previous answers?")) {
                 return;
@@ -205,7 +203,6 @@ const LiveQuiz = () => {
         setError('');
 
         try {
-            // Format Data
             const formattedSolutions = currentQuestions.map(q => ({
                 questionId: q.id,
                 title: q.title,
@@ -214,7 +211,6 @@ const LiveQuiz = () => {
                 qna: qnaMessages[q.id] || ''
             }));
 
-            // Submit to Firebase
             await submitQuizWeek(
                 user.email,
                 selectedWeek,
@@ -233,8 +229,12 @@ const LiveQuiz = () => {
         }
     };
 
+    // --- LOGIC FOR EXPIRATION ---
+    const currentWeekData = allQuestions[selectedWeek];
+    const isExpired = isWeekExpired(currentWeekData);
+
     if (loading) return <div style={{padding:'2rem', textAlign:'center'}}>Loading Quiz...</div>;
-    if (!user) return null; // Handled by useEffect redirect
+    if (!user) return null;
 
     return (
         <>
@@ -256,12 +256,10 @@ const LiveQuiz = () => {
                             </button>
                         )}
                     </div>
-                    {/* ... (Header Controls and Title remain the same) ... */}
 
                     <h1 className="quiz-title">Live Coding Competition</h1>
 
                     <nav className="week-nav">
-                        {/* ... (Week navigation buttons remain the same) ... */}
                         {Object.keys(allQuestions)
                             .sort((a, b) => Number(a) - Number(b))
                             .map(week => (
@@ -279,10 +277,8 @@ const LiveQuiz = () => {
                         Select a week to view questions. The final question of each week is mandatory.
                     </p>
 
-                    {/* Error Message is OUTSIDE the questions container, so it won't affect colors */}
                     {error && <div className="quiz-error-message">{error}</div>}
 
-                    {/* 🛡️ FIX: Wrapper Div isolates questions so nth-child colors don't shift */}
                     <div className="questions-container">
                         {currentQuestions.length > 0 ? (
                             currentQuestions.map(question => {
@@ -310,22 +306,39 @@ const LiveQuiz = () => {
 
                     {currentQuestions.length > 0 && (
                         <div style={{ textAlign: 'center', marginTop: '2rem' }}>
+                            {/* --- DATE DISPLAY --- */}
+                            {currentWeekData?.startDate && (
+                                <div style={{textAlign: 'center', marginBottom: '1rem', color: isExpired ? 'red' : 'green', fontWeight: 'bold'}}>
+                                    {isExpired 
+                                        ? `Competition Closed (Ended ${new Date(new Date(currentWeekData.startDate).setDate(new Date(currentWeekData.startDate).getDate() + 7)).toLocaleString([], {dateStyle: 'medium', timeStyle: 'short'})})`
+                                        : `Ends on ${new Date(new Date(currentWeekData.startDate).setDate(new Date(currentWeekData.startDate).getDate() + 7)).toLocaleString([], {dateStyle: 'medium', timeStyle: 'short'})}`
+                                    }
+                                </div>
+                            )}
+
+                            {/* --- SUBMIT BUTTON --- */}
                             <button
                                 className="submit-quiz-button"
                                 onClick={handleSubmit}
-                                disabled={isSubmitting}
-                                style={{ opacity: isSubmitting ? 0.7 : 1, marginTop: 0 }} // Reset margin since container has it
+                                disabled={isSubmitting || isExpired} 
+                                style={{ 
+                                    opacity: (isSubmitting || isExpired) ? 0.7 : 1, 
+                                    cursor: isExpired ? 'not-allowed' : 'pointer',
+                                    backgroundColor: isExpired ? '#999' : '#1a73e8',
+                                    marginTop: 0 
+                                }} 
                             >
-                                {isSubmitting
-                                    ? 'Processing...'
-                                    : alreadySubmitted
-                                        ? `Update / Resubmit Week ${selectedWeek}`
-                                        : `Submit Week ${selectedWeek} Answers`
+                                {isSubmitting 
+                                    ? 'Processing...' 
+                                    : isExpired 
+                                        ? '⛔ Competition Closed' 
+                                        : alreadySubmitted 
+                                            ? `Update / Resubmit Week ${selectedWeek}` 
+                                            : `Submit Week ${selectedWeek} Answers`
                                 }
                             </button>
 
-                            {/* ✨ NEW: Informational Note for Resubmissions */}
-                            {alreadySubmitted && (
+                            {alreadySubmitted && !isExpired && (
                                 <p style={{
                                     fontSize: '0.85rem',
                                     color: '#5f6368',

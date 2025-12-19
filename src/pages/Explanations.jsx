@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import AdminPanel from '../Admin/AdminPanel';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
+import { getQuizWeeks } from '../services/quizService'; // Import the service
 
 // 🔌 IMPORT REAL SERVICES
 import { getQuizWeeks } from '../services/quizService';
@@ -50,7 +51,7 @@ const ReadOnlyCodeEditor = ({ solutions }) => {
             </div>
             <textarea
                 className="code-editor"
-                value={displayCode}
+                value={code || ''} // Handle nulls
                 readOnly
                 spellCheck="false"
             />
@@ -193,8 +194,9 @@ const Explanations = () => {
                             <button
                                 className="admin-add-week-btn"
                                 onClick={() => setShowAdminPanel(true)}
+                                style={{backgroundColor: '#34a853'}} // Green color to distinguish
                             >
-                                + Add / Edit Week
+                                + Manage Solutions
                             </button>
                         )}
                     </div>

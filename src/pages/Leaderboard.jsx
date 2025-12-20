@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "../firebase/config.jsx";
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
 import { gdgTheme } from '../theme/gdgctheme';
 import GoogleBrandLines from '../components/common/GoogleBrandLines';
-import { getLeaderboardData } from '../services/leaderboardService.jsx';
+import GoogleOrbs from '../components/common/GoogleOrbs';
 
 const Leaderboard = () => {
     const [data, setData] = useState([]);
@@ -11,334 +13,290 @@ const Leaderboard = () => {
     const [error, setError] = useState(null);
 
     useEffect(() => {
-        const loadLeaderboard = async () => {
+        const buildDynamicLeaderboard = async () => {
             try {
-                const leaderboardData = await getLeaderboardData();
-                setData(leaderboardData);
+                setLoading(true);
+
+                // 1. FETCH ALL WEEKS
+                // This gets 'week_0', 'week_1', etc. from the 'leaderboard' collection
+                const lbColRef = collection(db, "leaderboard");
+                const lbSnapshot = await getDocs(lbColRef);
+
+                // 2. AGGREGATE DATA
+                // We map by Email to combine scores from Week 0, Week 1, etc.
+                const aggregator = {};
+                let latestWeekNo = -1; // Start low to find the true max
+
+                lbSnapshot.forEach(doc => {
+                    // Ignore the 'global' doc if it exists (we build it live now)
+                    if (doc.id === 'global') return;
+
+                    // Get the array of participants (field is 'users' based on your screenshot)
+                    const weekData = doc.data().users || [];
+
+                    // Scan for the highest week number to calculate streaks later
+                    weekData.forEach(item => {
+                        if (item.weekNo > latestWeekNo) latestWeekNo = item.weekNo;
+                    });
+
+                    // PROCESS THIS WEEK'S DATA
+                    weekData.forEach(submission => {
+                        const email = submission.email;
+                        if (!email) return;
+
+                        // Initialize record if seeing this student for the first time
+                        if (!aggregator[email]) {
+                            aggregator[email] = {
+                                email: email,
+                                // USE THE NAME FROM JSON DIRECTLY
+                                name: submission.name || "Unknown Participant",
+                                totalPoints: 0,
+                                browniePoints: 0,
+                                q3Score: 0,
+                                questionsCompleted: 0,
+                                submittedWeeks: []
+                            };
+                        }
+
+                        // Parse Scores (Safety check for numbers)
+                        const q1 = Number(submission.q1_score) || 0;
+                        const q2 = Number(submission.q2_score) || 0;
+                        const q3 = Number(submission.q3_score) || 0;
+                        const total = Number(submission.total_score) || 0;
+                        const weekNum = Number(submission.weekNo);
+
+                        // Update Totals
+                        aggregator[email].totalPoints += total;
+                        aggregator[email].browniePoints += (q1 + q2); // Brownie = Q1 + Q2
+                        aggregator[email].q3Score += q3;
+                        aggregator[email].submittedWeeks.push(weekNum);
+
+                        // Count Questions (> 0 score means attempted/solved)
+                        if (q1 > 0) aggregator[email].questionsCompleted++;
+                        if (q2 > 0) aggregator[email].questionsCompleted++;
+                        if (q3 > 0) aggregator[email].questionsCompleted++;
+
+                        // Update name if a newer one is found (just in case)
+                        if (submission.name) aggregator[email].name = submission.name;
+                    });
+                });
+
+                // 3. CALCULATE STREAK & FINALIZE
+                const processed = Object.values(aggregator).map(p => {
+                    // Streak Logic: Count consecutive weeks backwards from the LATEST week
+                    let streak = 0;
+                    const weeksSet = new Set(p.submittedWeeks);
+
+                    // If latestWeek is 5, we check 5, 4, 3...
+                    // If they missed week 5, streak is 0.
+                    for (let i = latestWeekNo; i >= 0; i--) {
+                        if (weeksSet.has(i)) {
+                            streak++;
+                        } else {
+                            break; // Streak broken
+                        }
+                    }
+
+                    return { ...p, streak };
+                });
+
+                // 4. SORTING LOGIC (5 Levels as requested)
+                processed.sort((a, b) => {
+                    // 1. Total Score
+                    if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
+                    // 2. Brownie Points (Q1 + Q2)
+                    if (b.browniePoints !== a.browniePoints) return b.browniePoints - a.browniePoints;
+                    // 3. Q3 Score
+                    if (b.q3Score !== a.q3Score) return b.q3Score - a.q3Score;
+                    // 4. Questions Attempted
+                    if (b.questionsCompleted !== a.questionsCompleted) return b.questionsCompleted - a.questionsCompleted;
+                    // 5. Streak
+                    return b.streak - a.streak;
+                });
+
+                // 5. ASSIGN RANKS
+                const ranked = processed.map((p, index) => ({
+                    ...p,
+                    rank: index + 1
+                }));
+
+                setData(ranked);
+
             } catch (err) {
-                setError('Failed to load leaderboard');
-                console.error('Error:', err);
+                console.error("Aggregation Error:", err);
+                setError("Failed to load leaderboard.");
             } finally {
                 setLoading(false);
             }
         };
 
-        loadLeaderboard();
+        buildDynamicLeaderboard();
     }, []);
 
-    // Define container styles for perfect alignment
     const CONTAINER_MAX_WIDTH = '1200px';
-    const CONTAINER_PADDING = gdgTheme.spacing.xl;
 
     return (
         <div style={{
             minHeight: '100vh',
             backgroundColor: gdgTheme.colors.background.secondary,
             display: 'flex',
-            flexDirection: 'column'
+            flexDirection: 'column',
+            fontFamily: "'Roboto', sans-serif"
         }}>
             <Header />
+            <style>
+                {`
+                    /* GRID LAYOUT (5 Columns) */
+                    .leaderboard-grid {
+                        display: grid;
+                        grid-template-columns: 80px minmax(200px, 1fr) 1fr 1fr 1fr;
+                        align-items: center;
+                        width: 100%;
+                    }
+                    .grid-header {
+                        font-weight: 700;
+                        font-size: 0.85rem;
+                        color: #5f6368;
+                        padding: 16px;
+                        border-bottom: 2px solid #e0e0e0;
+                        text-align: center;
+                        text-transform: uppercase;
+                        letter-spacing: 0.5px;
+                    }
+                    .grid-header.name-col { text-align: left; padding-left: 24px; }
 
-            {/* Page Header - PERFECTLY ALIGNED */}
+                    .grid-row-item {
+                        font-weight: 500;
+                        font-size: 0.95rem;
+                        color: #3c4043;
+                        padding: 14px 16px;
+                        text-align: center;
+                    }
+                    .name-col {
+                        text-align: left;
+                        padding-left: 24px;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        white-space: nowrap;
+                    }
+                    
+                    /* PODIUM */
+                    .podium-row .grid-row-item {
+                        padding: 22px 16px;
+                        font-size: 1.1rem;
+                    }
+                    .rank-1 { background-color: #FFF9E6; border-left: 4px solid #FFD700; }
+                    .rank-2 { background-color: #F8F9FA; border-left: 4px solid #C0C0C0; }
+                    .rank-3 { background-color: #FFF0E0; border-left: 4px solid #CD7F32; }
+                    .leaderboard-row-container:hover { background-color: #F1F3F4; transition: 0.2s; }
+
+                    /* MOBILE */
+                    .table-scroll-wrapper { overflow-x: auto; width: 100%; padding-bottom: 4px; }
+                    .table-min-width { min-width: 900px; }
+                `}
+            </style>
+
             <div style={{
                 backgroundColor: gdgTheme.colors.background.dark,
                 width: '100%',
-                padding: `${gdgTheme.spacing.xxl} 0`, // Only vertical padding on outer container
-                borderBottom: `1px solid ${gdgTheme.colors.neutral.lightGray}`
+                padding: `${gdgTheme.spacing.xxl} 0`,
+                borderBottom: `1px solid ${gdgTheme.colors.neutral.lightGray}`,
+                position: 'relative',
+                overflow: 'hidden'
             }}>
+                <GoogleOrbs />
                 <div style={{
                     maxWidth: CONTAINER_MAX_WIDTH,
                     margin: '0 auto',
-                    padding: `0 ${CONTAINER_PADDING}`,
-                    textAlign: 'center'
+                    padding: `0 ${gdgTheme.spacing.xl}`,
+                    textAlign: 'center',
+                    position: 'relative',
+                    zIndex: 1
                 }}>
-                    <GoogleBrandLines
-                        variant="dynamic"
-                        size="medium"
-                        gap="8px"
-                        style={{ justifyContent: 'center', marginBottom: gdgTheme.spacing.lg }}
-                    />
-
-                    <h1 style={{
-                        ...gdgTheme.typography.styles.heroTitle,
-                        color: gdgTheme.colors.primary.blue,
-                        marginBottom: gdgTheme.spacing.md
-                    }}>
+                    <GoogleBrandLines variant="dynamic" size="medium" gap="8px" style={{ justifyContent: 'center', marginBottom: gdgTheme.spacing.lg }} />
+                    <h1 style={{ ...gdgTheme.typography.styles.heroTitle, color: gdgTheme.colors.primary.blue, marginBottom: gdgTheme.spacing.sm }}>
                         Leaderboard
                     </h1>
+                </div>
+            </div>
 
-                    <p style={{
-                        ...gdgTheme.typography.styles.largeParagraph,
-                        color: gdgTheme.colors.background.primary,
-                        maxWidth: '600px',
-                        margin: '0 auto'
+            <div style={{ width: '100%', padding: `${gdgTheme.spacing.xl} 0`, flex: 1 }}>
+                <div style={{ maxWidth: CONTAINER_MAX_WIDTH, margin: '0 auto', padding: `0 ${gdgTheme.spacing.xl}` }}>
+                    <div style={{
+                        backgroundColor: '#ffffff',
+                        borderRadius: gdgTheme.borderRadius.large,
+                        boxShadow: '0 1px 3px 0 rgba(60,64,67,0.3)',
+                        overflow: 'hidden'
                     }}>
-                        Current rankings for the coding competition
-                    </p>
+                        <div className="table-scroll-wrapper">
+                            <div className="table-min-width">
+                                <div className="leaderboard-grid" style={{ backgroundColor: '#f8f9fa' }}>
+                                    <div className="grid-header">Rank</div>
+                                    <div className="grid-header name-col">Participant</div>
+                                    <div className="grid-header">Questions</div>
+                                    <div className="grid-header">Score</div>
+                                    <div className="grid-header">Streak</div>
+                                </div>
+                                {loading ? (
+                                    <div style={{ padding: '60px', textAlign: 'center', color: '#5f6368' }}>Calculating Scores...</div>
+                                ) : error ? (
+                                    <div style={{ padding: '60px', textAlign: 'center', color: '#d93025' }}>{error}</div>
+                                ) : (
+                                    <div>
+                                        {data.map((participant) => (
+                                            <ParticipantRow
+                                                key={participant.id}
+                                                participant={participant}
+                                            />
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-
-            {/* Leaderboard Content - PERFECTLY ALIGNED */}
-            <div style={{
-                width: '100%',
-                padding: `${gdgTheme.spacing.xl} 0`, // Only vertical padding on outer container
-                flex: 1
-            }}>
-                <div style={{
-                    maxWidth: CONTAINER_MAX_WIDTH,
-                    margin: '0 auto',
-                    padding: `0 ${CONTAINER_PADDING}`
-                }}>
-                    {loading ? (
-                        <LoadingState />
-                    ) : error ? (
-                        <ErrorState error={error} />
-                    ) : (
-                        <LeaderboardTable data={data} />
-                    )}
-                </div>
-            </div>
-
             <Footer />
         </div>
     );
 };
 
-const LoadingState = () => (
-    <div style={{
-        backgroundColor: gdgTheme.colors.background.primary,
-        borderRadius: gdgTheme.borderRadius.large,
-        padding: `${gdgTheme.spacing.xxxl} ${gdgTheme.spacing.xl}`,
-        textAlign: 'center',
-        boxShadow: gdgTheme.shadows.small
-    }}>
-        <div style={{
-            width: '40px',
-            height: '40px',
-            border: `4px solid ${gdgTheme.colors.background.secondary}`,
-            borderTop: `4px solid ${gdgTheme.colors.primary.blue}`,
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite',
-            margin: '0 auto',
-            marginBottom: gdgTheme.spacing.lg
-        }} />
-        <p style={{ ...gdgTheme.typography.styles.paragraph, color: gdgTheme.colors.text.secondary }}>
-            Loading leaderboard...
-        </p>
-        <style>
-            {`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}
-        </style>
-    </div>
-);
+const ParticipantRow = ({ participant }) => {
+    const rank = participant.rank;
+    const isPodium = rank <= 3;
+    let rowClasses = "leaderboard-grid leaderboard-row-container";
+    if (isPodium) rowClasses += ` podium-row rank-${rank}`;
 
-const ErrorState = ({ error }) => (
-    <div style={{
-        backgroundColor: gdgTheme.colors.background.primary,
-        borderRadius: gdgTheme.borderRadius.large,
-        padding: `${gdgTheme.spacing.xxxl} ${gdgTheme.spacing.xl}`,
-        textAlign: 'center',
-        boxShadow: gdgTheme.shadows.small,
-        border: `1px solid ${gdgTheme.colors.accent.red}`
-    }}>
-        <h3 style={{
-            ...gdgTheme.typography.styles.sectionTitle,
-            color: gdgTheme.colors.accent.red,
-            marginBottom: gdgTheme.spacing.md
-        }}>
-            Error Loading Leaderboard
-        </h3>
-        <p style={{ ...gdgTheme.typography.styles.paragraph, color: gdgTheme.colors.text.secondary }}>
-            {error}
-        </p>
-        <button
-            onClick={() => window.location.reload()}
-            style={{
-                ...gdgTheme.typography.styles.button,
-                backgroundColor: gdgTheme.colors.primary.blue,
-                color: gdgTheme.colors.text.inverse,
-                border: 'none',
-                padding: `${gdgTheme.spacing.md} ${gdgTheme.spacing.lg}`,
-                borderRadius: gdgTheme.borderRadius.medium,
-                cursor: 'pointer',
-                marginTop: gdgTheme.spacing.md
-            }}
-        >
-            Try Again
-        </button>
-    </div>
-);
-
-const LeaderboardTable = ({ data }) => (
-    <div style={{
-        backgroundColor: gdgTheme.colors.background.primary,
-        borderRadius: gdgTheme.borderRadius.large,
-        overflow: 'hidden',
-        boxShadow: gdgTheme.shadows.medium,
-        width: '100%',
-        margin: 0 // Ensure no extra margins
-    }}>
-        {/* Table Header */}
-        <div style={{
-            backgroundColor: gdgTheme.colors.background.secondary,
-            padding: `${gdgTheme.spacing.lg} ${gdgTheme.spacing.xl}`,
-            borderBottom: `1px solid ${gdgTheme.colors.neutral.lightGray}`
-        }}>
-            <h2 style={{
-                ...gdgTheme.typography.styles.sectionTitle,
-                margin: 0,
-                color: gdgTheme.colors.text.primary,
-                textAlign: 'center'
-            }}>
-                Current Rankings ({data.length} participants)
-            </h2>
-        </div>
-
-        {/* Table Rows */}
-        <div>
-            {data.map((participant, index) => (
-                <ParticipantRow
-                    key={participant.id}
-                    participant={participant}
-                    isLast={index === data.length - 1}
-                />
-            ))}
-        </div>
-    </div>
-);
-
-const ParticipantRow = ({ participant, isLast }) => {
-    const getRankColor = (rank) => {
-        switch (rank) {
-            case 1: return gdgTheme.colors.accent.yellow;
-            case 2: return '#c0c0c0';
-            case 3: return '#cd7f32';
-            default: return gdgTheme.colors.primary.blue;
-        }
-    };
-
-    const getRankIcon = (rank) => {
-        switch (rank) {
-            case 1: return '🥇';
-            case 2: return '🥈';
-            case 3: return '🥉';
-            default: return null;
-        }
+    const renderRank = () => {
+        if (rank === 1) return <span style={{ fontSize: '1.8rem' }}>🥇</span>;
+        if (rank === 2) return <span style={{ fontSize: '1.8rem' }}>🥈</span>;
+        if (rank === 3) return <span style={{ fontSize: '1.8rem' }}>🥉</span>;
+        return <span style={{ color: '#5f6368', fontWeight: 'bold' }}>{rank}</span>;
     };
 
     return (
-        <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            padding: `${gdgTheme.spacing.lg} ${gdgTheme.spacing.xl}`,
-            borderBottom: !isLast ? `1px solid ${gdgTheme.colors.neutral.lightGray}` : 'none',
-            transition: 'background-color 0.2s ease',
-            minHeight: '100px'
-        }}
-             onMouseEnter={(e) => {
-                 e.currentTarget.style.backgroundColor = gdgTheme.colors.background.secondary;
-             }}
-             onMouseLeave={(e) => {
-                 e.currentTarget.style.backgroundColor = 'transparent';
-             }}
-        >
-            {/* Rank */}
-            <div style={{
-                minWidth: '100px',
-                textAlign: 'center',
-                marginRight: gdgTheme.spacing.xl
-            }}>
-                <div style={{
-                    ...gdgTheme.typography.styles.sectionTitle,
-                    fontSize: '1.8rem',
-                    color: getRankColor(participant.rank),
-                    marginBottom: gdgTheme.spacing.xs
-                }}>
-                    #{participant.rank}
-                </div>
-                {getRankIcon(participant.rank) && (
-                    <div style={{ fontSize: '2rem' }}>
-                        {getRankIcon(participant.rank)}
-                    </div>
-                )}
-            </div>
-
-            {/* Avatar */}
-            <div style={{
-                width: '70px',
-                height: '70px',
-                borderRadius: '50%',
-                backgroundColor: gdgTheme.colors.primary.blue,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginRight: gdgTheme.spacing.xl,
-                ...gdgTheme.typography.styles.button,
-                color: gdgTheme.colors.text.inverse,
-                fontSize: '1.3rem',
-                fontWeight: 'bold'
-            }}>
-                {participant.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-            </div>
-
-            {/* Name and Email */}
-            <div style={{ flex: 1, marginRight: gdgTheme.spacing.xl }}>
-                <div style={{
-                    ...gdgTheme.typography.styles.subtitle,
-                    fontSize: '1.3rem',
-                    color: gdgTheme.colors.text.primary,
-                    marginBottom: gdgTheme.spacing.xs
-                }}>
+        <div className={rowClasses} style={{ borderBottom: '1px solid #f1f3f4' }}>
+            <div className="grid-row-item">{renderRank()}</div>
+            <div className="grid-row-item name-col">
+                <span style={{ fontWeight: isPodium ? 700 : 500, color: '#202124' }}>
                     {participant.name}
-                </div>
-                <div style={{
-                    ...gdgTheme.typography.styles.paragraph,
-                    fontSize: '1rem',
-                    color: gdgTheme.colors.text.secondary
-                }}>
-                    {participant.email}
-                </div>
+                </span>
             </div>
-
-            {/* Stats */}
-            <div style={{
-                display: 'flex',
-                gap: gdgTheme.spacing.xxxl,
-                alignItems: 'center'
-            }}>
-                <div style={{ textAlign: 'center', minWidth: '120px' }}>
+            <div className="grid-row-item">{participant.questionsCompleted}</div>
+            <div className="grid-row-item" style={{ color: gdgTheme.colors.primary.blue, fontWeight: 700 }}>
+                {participant.totalPoints}
+            </div>
+            <div className="grid-row-item">
+                {participant.streak > 0 ? (
                     <div style={{
-                        ...gdgTheme.typography.styles.sectionTitle,
-                        fontSize: '1.8rem',
-                        color: gdgTheme.colors.primary.blue,
-                        fontWeight: 'bold'
+                        display: 'inline-flex', alignItems: 'center', gap: '6px', justifyContent: 'center',
+                        backgroundColor: isPodium ? 'rgba(230, 81, 0, 0.1)' : '#fce8e6',
+                        padding: '4px 12px', borderRadius: '16px',
+                        color: '#c5221f', fontWeight: '700', fontSize: '0.85rem'
                     }}>
-                        {participant.totalPoints}
+                        <span>🔥</span> {participant.streak}
                     </div>
-                    <div style={{
-                        ...gdgTheme.typography.styles.metadata,
-                        color: gdgTheme.colors.text.secondary,
-                        fontSize: '0.9rem'
-                    }}>
-                        Points
-                    </div>
-                </div>
-
-                <div style={{ textAlign: 'center', minWidth: '100px' }}>
-                    <div style={{
-                        ...gdgTheme.typography.styles.sectionTitle,
-                        fontSize: '1.4rem',
-                        color: gdgTheme.colors.text.primary
-                    }}>
-                        {participant.questionsCompleted || 0}
-                    </div>
-                    <div style={{
-                        ...gdgTheme.typography.styles.metadata,
-                        color: gdgTheme.colors.text.secondary,
-                        fontSize: '0.9rem'
-                    }}>
-                        Questions
-                    </div>
-                </div>
+                ) : <span style={{ color: '#bdc1c6' }}>-</span>}
             </div>
         </div>
     );

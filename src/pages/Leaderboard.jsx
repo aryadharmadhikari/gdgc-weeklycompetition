@@ -6,6 +6,7 @@ import Footer from '../components/layout/Footer';
 import { gdgTheme } from '../theme/gdgctheme';
 import GoogleBrandLines from '../components/common/GoogleBrandLines';
 import GoogleOrbs from '../components/common/GoogleOrbs';
+// Removed unused import 'useAuth' to fix linting warning
 
 const Leaderboard = () => {
     const [data, setData] = useState([]);
@@ -18,25 +19,24 @@ const Leaderboard = () => {
                 setLoading(true);
 
                 // 1. FETCH ALL WEEKS
-                // This gets 'week_0', 'week_1', etc. from the 'leaderboard' collection
                 const lbColRef = collection(db, "leaderboard");
                 const lbSnapshot = await getDocs(lbColRef);
 
                 // 2. AGGREGATE DATA
-                // We map by Email to combine scores from Week 0, Week 1, etc.
                 const aggregator = {};
-                let latestWeekNo = -1; // Start low to find the true max
+                let latestWeekNo = -1;
 
                 lbSnapshot.forEach(doc => {
-                    // Ignore the 'global' doc if it exists (we build it live now)
                     if (doc.id === 'global') return;
 
-                    // Get the array of participants (field is 'users' based on your screenshot)
                     const weekData = doc.data().users || [];
 
-                    // Scan for the highest week number to calculate streaks later
+                    // Scan for the highest week number
                     weekData.forEach(item => {
-                        if (item.weekNo > latestWeekNo) latestWeekNo = item.weekNo;
+                        const wNo = Number(item.weekNo);
+                        if (!isNaN(wNo) && wNo > latestWeekNo) {
+                            latestWeekNo = wNo;
+                        }
                     });
 
                     // PROCESS THIS WEEK'S DATA
@@ -47,8 +47,9 @@ const Leaderboard = () => {
                         // Initialize record if seeing this student for the first time
                         if (!aggregator[email]) {
                             aggregator[email] = {
+                                // FIX: Added 'id' so React key={participant.id} works
+                                id: email,
                                 email: email,
-                                // USE THE NAME FROM JSON DIRECTLY
                                 name: submission.name || "Unknown Participant",
                                 totalPoints: 0,
                                 browniePoints: 0,
@@ -67,50 +68,44 @@ const Leaderboard = () => {
 
                         // Update Totals
                         aggregator[email].totalPoints += total;
-                        aggregator[email].browniePoints += (q1 + q2); // Brownie = Q1 + Q2
+                        aggregator[email].browniePoints += (q1 + q2);
                         aggregator[email].q3Score += q3;
-                        aggregator[email].submittedWeeks.push(weekNum);
+                        if (!isNaN(weekNum)) {
+                            aggregator[email].submittedWeeks.push(weekNum);
+                        }
 
                         // Count Questions (> 0 score means attempted/solved)
                         if (q1 > 0) aggregator[email].questionsCompleted++;
                         if (q2 > 0) aggregator[email].questionsCompleted++;
                         if (q3 > 0) aggregator[email].questionsCompleted++;
 
-                        // Update name if a newer one is found (just in case)
+                        // Update name if a newer one is found
                         if (submission.name) aggregator[email].name = submission.name;
                     });
                 });
 
                 // 3. CALCULATE STREAK & FINALIZE
                 const processed = Object.values(aggregator).map(p => {
-                    // Streak Logic: Count consecutive weeks backwards from the LATEST week
                     let streak = 0;
                     const weeksSet = new Set(p.submittedWeeks);
 
-                    // If latestWeek is 5, we check 5, 4, 3...
-                    // If they missed week 5, streak is 0.
                     for (let i = latestWeekNo; i >= 0; i--) {
                         if (weeksSet.has(i)) {
                             streak++;
                         } else {
-                            break; // Streak broken
+                            break;
                         }
                     }
 
                     return { ...p, streak };
                 });
 
-                // 4. SORTING LOGIC (5 Levels as requested)
+                // 4. SORTING LOGIC
                 processed.sort((a, b) => {
-                    // 1. Total Score
                     if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
-                    // 2. Brownie Points (Q1 + Q2)
                     if (b.browniePoints !== a.browniePoints) return b.browniePoints - a.browniePoints;
-                    // 3. Q3 Score
                     if (b.q3Score !== a.q3Score) return b.q3Score - a.q3Score;
-                    // 4. Questions Attempted
                     if (b.questionsCompleted !== a.questionsCompleted) return b.questionsCompleted - a.questionsCompleted;
-                    // 5. Streak
                     return b.streak - a.streak;
                 });
 
@@ -130,7 +125,9 @@ const Leaderboard = () => {
             }
         };
 
-        buildDynamicLeaderboard();
+        // FIX: Handle the promise returned by the async function
+        buildDynamicLeaderboard().catch(err => console.error("Effect Error:", err));
+
     }, []);
 
     const CONTAINER_MAX_WIDTH = '1200px';
@@ -245,6 +242,7 @@ const Leaderboard = () => {
                                     <div>
                                         {data.map((participant) => (
                                             <ParticipantRow
+                                                // FIX: 'id' is now defined in the aggregator
                                                 key={participant.id}
                                                 participant={participant}
                                             />

@@ -1,19 +1,16 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { loadGoogleFonts, gdgTheme } from './theme/gdgctheme';
+import { gdgTheme } from './theme/gdgctheme';
 import Home from './pages/Landing.jsx';
 import LiveQuiz from './pages/LiveQuiz';
 import Leaderboard from './pages/Leaderboard';
 import Explanations from './pages/Explanations.jsx';
-import { AuthProvider } from './contexts/AuthContext';
 
 // IMPORT THE NEW MODAL
 import YearSelectionModal from './components/auth/YearSelectionModal';
 
 function App() {
     return (
-        <AuthProvider>
-
             <Router>
                 <div style={{
                     fontFamily: gdgTheme.typography.primary.family,
@@ -35,7 +32,6 @@ function App() {
 
                 </div>
             </Router>
-        </AuthProvider>
     );
 }
 

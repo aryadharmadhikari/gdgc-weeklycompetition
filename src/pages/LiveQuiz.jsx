@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './LiveQuiz.css';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/useAuth';
 import AdminPanel from '../Admin/AdminPanel';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';

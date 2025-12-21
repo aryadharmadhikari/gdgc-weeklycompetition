@@ -262,5 +262,3 @@ export const createButtonStyle = (variant = 'primary', size = 'medium') => {
         ...sizes[size]
     };
 };
-
-export default gdgTheme;

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { gdgTheme } from '../../theme/gdgctheme';
 import gdgLogo from '../../assets/images/light_gdgdbit_logo.jpg';
-import { useAuth } from '../../contexts/AuthContext.jsx';
+import { useAuth } from '../../contexts/useAuth';
 
 const Header = () => {
     const { user, isAuthenticated, signIn, signOut } = useAuth();

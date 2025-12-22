@@ -20,6 +20,8 @@ dist-ssr
 # Local Environment
 # Environment-specific configuration files that should not be committed.
 *.local
+.env
+.env.local
 
 # Editor Directories and Files
 # Configuration files from code editors to avoid team conflicts.

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './AdminPanel.css';
 import { addQuizWeek, getNextWeekNumber, getAllQuizWeeksForAdmin} from '../services/quizService';
-import { refreshLeaderboardCache } from '../services/leaderboardService';
 
 // --- SUB-COMPONENT: Multi-Language Solution Input ---
 const SolutionInput = ({ solutions, onChange }) => {
@@ -107,15 +106,15 @@ const AdminPanel = ({ pageType, onClose }) => {
         const now = new Date();
         now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
         setStartDate(now.toISOString().slice(0, 16));
-        
+
         setViewMode('editor');
     };
 
     const handleEditWeek = (weekData) => {
         setEditingWeekNum(weekData.id);
-        
+
         if (weekData.startDate) {
-            setStartDate(weekData.startDate.slice(0, 16)); 
+            setStartDate(weekData.startDate.slice(0, 16));
         } else {
             setStartDate('');
         }
@@ -190,7 +189,7 @@ const AdminPanel = ({ pageType, onClose }) => {
                 solutionCode: pageType === 'Explanation' ? q.solutionCode : {},
                 explanation: pageType === 'Explanation' ? q.explanation : ''
             }));
-            
+
             await addQuizWeek(editingWeekNum, `Week ${editingWeekNum}`, formattedQuestions, isLive, startDate);
 
             alert(isLive ? `Week ${editingWeekNum} is now LIVE!` : `Week ${editingWeekNum} saved to Drafts.`);
@@ -219,7 +218,7 @@ const AdminPanel = ({ pageType, onClose }) => {
 
                 {allWeeks.map((week) => (
                     <div key={week.id} className="week-card" onClick={() => handleEditWeek(week)}>
-                        <span className={`status-badge ${week.isVisible ? 'status-live' : 'status-draft'}`}>
+                        <span className={`status-badge ${week.isVisible ? 'status-live' : 'status-live'}`}>
                             {week.isVisible ? '● Live' : '● Draft'}
                         </span>
                         <div className="wc-title">{week.title || `Week ${week.id}`}</div>
@@ -239,15 +238,12 @@ const AdminPanel = ({ pageType, onClose }) => {
                         <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1a73e8' }}>Week {editingWeekNum}</div>
                     </div>
                     <div style={{display: 'flex', gap: '10px'}}>
-                         {/* <button className="btn" style={{ background: '#ffdddd', color: '#d93025', border: '1px solid #d93025' }} onClick={handleDelete}>
-                            🗑️ Delete Week
-                        </button> */}
                         <button className="btn" style={{ border: '1px solid #ddd' }} onClick={() => setViewMode('dashboard')}>
                             Cancel
                         </button>
                     </div>
                 </div>
-                
+
                 <div style={{ background: '#f1f3f4', padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
                     <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>Competition Start Date & Time (Locks +7 Days from this time)</label>
                     <input
@@ -335,14 +331,7 @@ const AdminPanel = ({ pageType, onClose }) => {
                     {isLoading ? 'Saving...' : 'Save as Draft'}
                 </button>
                 <div style={{ display: 'flex', gap: '10px' }}>
-                    <button className="btn" style={{ background: '#fbbc04', color: '#000' }} onClick={async () => {
-                        if (window.confirm("Refresh Leaderboard?")) {
-                            await refreshLeaderboardCache();
-                            alert("Done");
-                        }
-                    }}>
-                        Refresh Ranks
-                    </button>
+                    {/* BUTTON REMOVED: Refresh Ranks (Dynamic Leaderboard doesn't need this) */}
                     <button className="btn btn-publish" onClick={() => handleSave(true)} disabled={isLoading}>
                         {isLoading ? 'Publishing...' : 'Publish Live'}
                     </button>

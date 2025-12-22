@@ -167,15 +167,16 @@ const LiveQuiz = () => {
 
                 if (user) {
                     setLoading(true);
-                    const submission = await getUserSubmission(user.email, selectedWeek);
+                    // Updated to handle the new return structure (full object)
+                    const submissionData = await getUserSubmission(user.email, selectedWeek);
 
-                    if (submission) {
+                    if (submissionData && submissionData.solutions) {
                         setAlreadySubmitted(true);
                         const prevSolutions = {};
                         const prevQna = {};
                         const prevExplanations = {};
 
-                        submission.solutions.forEach(sol => {
+                        submissionData.solutions.forEach(sol => {
                             prevSolutions[sol.questionId] = {
                                 code: sol.code,
                                 lang: sol.language
@@ -280,8 +281,13 @@ const LiveQuiz = () => {
                 };
             });
 
+            // UPDATED: Pass the full user object to include name/uid/email
             await submitQuizWeek(
-                user.email,
+                {
+                    email: user.email,
+                    name: user.displayName,
+                    uid: user.uid
+                },
                 selectedWeek,
                 formattedSolutions
             );

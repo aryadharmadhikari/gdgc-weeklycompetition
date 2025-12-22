@@ -11,7 +11,7 @@ const Leaderboard = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    // --- LOGIC START (UNTOUCHED) ---
+    // --- LOGIC START (UPDATED FOR ROBUSTNESS) ---
     useEffect(() => {
         const buildDynamicLeaderboard = async () => {
             try {
@@ -22,15 +22,51 @@ const Leaderboard = () => {
                 let latestWeekNo = -1;
 
                 lbSnapshot.forEach(doc => {
-                    if (doc.id === 'global') return;
-                    const weekData = doc.data().users || [];
-                    weekData.forEach(item => {
-                        const wNo = Number(item.weekNo);
-                        if (!isNaN(wNo) && wNo > latestWeekNo) latestWeekNo = wNo;
-                    });
+                    // Skip known metadata docs
+                    if (doc.id === 'global' || doc.id === 'stats') return;
+
+                    const docData = doc.data();
+                    const weekData = docData.users || [];
+
+                    // --- 1. ROBUST WEEK NUMBER EXTRACTION ---
+                    let docWeekNo = Number(docData.weekNo);
+
+                    // If not at root, try extracting from Document ID (Matches "week 1", "Week-1", "week_1", "1")
+                    if (isNaN(docWeekNo)) {
+                        // Regex Explanation:
+                        // week  -> literal "week" (case insensitive)
+                        // [\s_-]? -> optional separator (space, underscore, or dash)
+                        // (\d+) -> capture the number
+                        const match = doc.id.match(/week[\s_-]?(\d+)/i) || doc.id.match(/^(\d+)$/);
+                        if (match && match[1]) {
+                            docWeekNo = Number(match[1]);
+                        }
+                    }
+
+                    // If still NaN, try finding it inside ANY user object in the array (Legacy Support)
+                    if (isNaN(docWeekNo) && Array.isArray(weekData)) {
+                        const userWithWeek = weekData.find(u => u.weekNo);
+                        if (userWithWeek) {
+                            docWeekNo = Number(userWithWeek.weekNo);
+                        }
+                    }
+
+                    // If we STILL can't find a week number, skip this file
+                    if (isNaN(docWeekNo)) {
+                        console.warn(`Skipping document ${doc.id}: No week number found.`);
+                        return;
+                    }
+
+                    // --- 2. UPDATE LATEST WEEK ---
+                    if (docWeekNo > latestWeekNo) {
+                        latestWeekNo = docWeekNo;
+                    }
+
+                    // --- 3. AGGREGATE DATA ---
                     weekData.forEach(submission => {
                         const email = submission.email;
                         if (!email) return;
+
                         if (!aggregator[email]) {
                             aggregator[email] = {
                                 id: email,
@@ -43,33 +79,46 @@ const Leaderboard = () => {
                                 submittedWeeks: []
                             };
                         }
+
                         const q1 = Number(submission.q1_score) || 0;
                         const q2 = Number(submission.q2_score) || 0;
                         const q3 = Number(submission.q3_score) || 0;
                         const total = Number(submission.total_score) || 0;
-                        const weekNum = Number(submission.weekNo);
 
                         aggregator[email].totalPoints += total;
                         aggregator[email].browniePoints += (q1 + q2);
                         aggregator[email].q3Score += q3;
-                        if (!isNaN(weekNum)) aggregator[email].submittedWeeks.push(weekNum);
+
+                        // Push the valid week number for streak calculation
+                        aggregator[email].submittedWeeks.push(docWeekNo);
+
                         if (q1 > 0) aggregator[email].questionsCompleted++;
                         if (q2 > 0) aggregator[email].questionsCompleted++;
                         if (q3 > 0) aggregator[email].questionsCompleted++;
+
                         if (submission.name) aggregator[email].name = submission.name;
                     });
                 });
 
+                // --- 4. CALCULATE STREAKS ---
                 const processed = Object.values(aggregator).map(p => {
                     let streak = 0;
                     const weeksSet = new Set(p.submittedWeeks);
-                    for (let i = latestWeekNo; i >= 0; i--) {
-                        if (weeksSet.has(i)) streak++;
-                        else break;
+
+                    // Streak Logic: Check backwards from the LATEST week found
+                    // If Latest is 5, we check 5, then 4, then 3...
+                    // If a user missed Week 5, their streak is 0.
+                    for (let i = latestWeekNo; i >= 1; i--) {
+                        if (weeksSet.has(i)) {
+                            streak++;
+                        } else {
+                            break;
+                        }
                     }
                     return { ...p, streak };
                 });
 
+                // --- 5. SORTING ---
                 processed.sort((a, b) => {
                     if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
                     if (b.browniePoints !== a.browniePoints) return b.browniePoints - a.browniePoints;
@@ -227,9 +276,7 @@ const Leaderboard = () => {
                     }} />
                 </div>
 
-                {/* 2. FROSTED OVERLAY (Noise + Blur)
-                   This binds the colors together so they don't look like separate blobs.
-                */}
+                {/* 2. FROSTED OVERLAY (Noise + Blur) */}
                 <div style={{
                     position: 'absolute',
                     inset: 0,
@@ -264,7 +311,6 @@ const Leaderboard = () => {
                         position: 'relative'
                     }}>
                         <span style={{
-                            // Crisp White text with a colored glow is more readable on bright backgrounds
                             color: '#ffffff',
                             textShadow: '0 0 30px rgba(66, 133, 244, 0.6), 0 0 10px rgba(0,0,0,0.5)',
                             display: 'inline-block',
@@ -300,12 +346,44 @@ const Leaderboard = () => {
                                     <div style={{ padding: '60px', textAlign: 'center', color: '#d93025' }}>{error}</div>
                                 ) : (
                                     <div>
-                                        {data.map((participant) => (
-                                            <ParticipantRow
-                                                key={participant.id}
-                                                participant={participant}
-                                            />
-                                        ))}
+                                        {data.length > 0 ? (
+                                            data.map((participant) => (
+                                                <ParticipantRow
+                                                    key={participant.id}
+                                                    participant={participant}
+                                                />
+                                            ))
+                                        ) : (
+                                            // --- NEW EMPTY STATE UI ---
+                                            <div style={{
+                                                textAlign: 'center',
+                                                padding: '60px 20px',
+                                                color: '#5f6368'
+                                            }}>
+                                                <div style={{ fontSize: '4rem', marginBottom: '20px' }}>⏳</div>
+                                                <h2 style={{ color: '#202124', marginBottom: '10px' }}>
+                                                    Competition in Progress
+                                                </h2>
+                                                <p style={{ maxWidth: '500px', margin: '0 auto', lineHeight: '1.6' }}>
+                                                    Week 1 submissions are currently open!
+                                                    <br />
+                                                    Scores will be updated here after the DSA team completes the evaluation.
+                                                </p>
+                                                <br />
+                                                <a href="/quiz" style={{
+                                                    display: 'inline-block',
+                                                    padding: '12px 24px',
+                                                    backgroundColor: '#1a73e8',
+                                                    color: 'white',
+                                                    borderRadius: '24px',
+                                                    textDecoration: 'none',
+                                                    fontWeight: 'bold',
+                                                    boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
+                                                }}>
+                                                    Go to Submission Page
+                                                </a>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>
@@ -344,7 +422,7 @@ const ParticipantRow = ({ participant }) => {
                 {participant.totalPoints}
             </div>
             <div className="grid-row-item">
-                {participant.streak > 0 ? (
+                {participant.streak >= 0 ? (
                     <div style={{
                         display: 'inline-flex', alignItems: 'center', gap: '6px', justifyContent: 'center',
                         backgroundColor: isPodium ? 'rgba(230, 81, 0, 0.1)' : '#fce8e6',

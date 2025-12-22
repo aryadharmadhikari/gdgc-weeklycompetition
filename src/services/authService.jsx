@@ -1,4 +1,4 @@
-// src/services/authService.js
+// src/services/authService.jsx
 import { auth, googleProvider, db } from "../firebase/config";
 import { signInWithPopup, signOut } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
@@ -38,7 +38,7 @@ export const loginWithGoogle = async () => {
 export const checkUserProfileExists = async (email) => {
     if (!email) return false;
 
-    // CHANGED: using email as the Document ID
+    // Using email as the Document ID
     const userRef = doc(db, "users", email);
     const userSnap = await getDoc(userRef);
     return userSnap.exists();
@@ -51,9 +51,10 @@ export const registerNewUser = async (user, selectedYear) => {
     const userRef = doc(db, "users", user.email);
 
     await setDoc(userRef, {
+        uid: user.uid,          // <--- ADDED: Crucial for Security Rules
         name: user.displayName,
-        email: user.email, // Kept this for easier reading/sorting in the console
-        role: "admin",
+        email: user.email,
+        role: "admin",          // ⚠️ NOTE: You might want to change this to "student" for production!
         collegeYear: selectedYear,
         branch: detectedBranch,
         score: 0,

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './AdminPanel.css';
-import { addQuizWeek, getNextWeekNumber, getAllQuizWeeksForAdmin, deleteQuizWeek } from '../services/quizService';
+import { addQuizWeek, getNextWeekNumber, getAllQuizWeeksForAdmin} from '../services/quizService';
 import { refreshLeaderboardCache } from '../services/leaderboardService';
 
 // --- SUB-COMPONENT: Multi-Language Solution Input ---
@@ -140,26 +140,6 @@ const AdminPanel = ({ pageType, onClose }) => {
 
         setQuestions(parsedQuestions);
         setViewMode('editor');
-    };
-
-    const handleDelete = async () => {
-        const confirmDelete = window.confirm(
-            `⚠️ DANGER ZONE ⚠️\n\nAre you sure you want to DELETE Week ${editingWeekNum}?\n\nThis will remove the questions permanently.`
-        );
-
-        if (confirmDelete) {
-            setIsLoading(true);
-            try {
-                await deleteQuizWeek(editingWeekNum);
-                alert(`Week ${editingWeekNum} deleted.`);
-                await loadDashboard();
-                setViewMode('dashboard');
-            } catch (err) {
-                alert("Failed to delete week.");
-            } finally {
-                setIsLoading(false);
-            }
-        }
     };
 
     const updateQuestion = (index, field, value) => {

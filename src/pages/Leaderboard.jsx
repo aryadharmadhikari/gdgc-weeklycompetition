@@ -5,50 +5,36 @@ import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
 import { gdgTheme } from '../theme/gdgctheme';
 import GoogleBrandLines from '../components/common/GoogleBrandLines';
-import GoogleOrbs from '../components/common/GoogleOrbs';
 
 const Leaderboard = () => {
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
+    // --- LOGIC START (UNTOUCHED) ---
     useEffect(() => {
         const buildDynamicLeaderboard = async () => {
             try {
                 setLoading(true);
-
-                // 1. FETCH ALL WEEKS
-                // This gets 'week_0', 'week_1', etc. from the 'leaderboard' collection
                 const lbColRef = collection(db, "leaderboard");
                 const lbSnapshot = await getDocs(lbColRef);
-
-                // 2. AGGREGATE DATA
-                // We map by Email to combine scores from Week 0, Week 1, etc.
                 const aggregator = {};
-                let latestWeekNo = -1; // Start low to find the true max
+                let latestWeekNo = -1;
 
                 lbSnapshot.forEach(doc => {
-                    // Ignore the 'global' doc if it exists (we build it live now)
                     if (doc.id === 'global') return;
-
-                    // Get the array of participants (field is 'users' based on your screenshot)
                     const weekData = doc.data().users || [];
-
-                    // Scan for the highest week number to calculate streaks later
                     weekData.forEach(item => {
-                        if (item.weekNo > latestWeekNo) latestWeekNo = item.weekNo;
+                        const wNo = Number(item.weekNo);
+                        if (!isNaN(wNo) && wNo > latestWeekNo) latestWeekNo = wNo;
                     });
-
-                    // PROCESS THIS WEEK'S DATA
                     weekData.forEach(submission => {
                         const email = submission.email;
                         if (!email) return;
-
-                        // Initialize record if seeing this student for the first time
                         if (!aggregator[email]) {
                             aggregator[email] = {
+                                id: email,
                                 email: email,
-                                // USE THE NAME FROM JSON DIRECTLY
                                 name: submission.name || "Unknown Participant",
                                 totalPoints: 0,
                                 browniePoints: 0,
@@ -57,71 +43,47 @@ const Leaderboard = () => {
                                 submittedWeeks: []
                             };
                         }
-
-                        // Parse Scores (Safety check for numbers)
                         const q1 = Number(submission.q1_score) || 0;
                         const q2 = Number(submission.q2_score) || 0;
                         const q3 = Number(submission.q3_score) || 0;
                         const total = Number(submission.total_score) || 0;
                         const weekNum = Number(submission.weekNo);
 
-                        // Update Totals
                         aggregator[email].totalPoints += total;
-                        aggregator[email].browniePoints += (q1 + q2); // Brownie = Q1 + Q2
+                        aggregator[email].browniePoints += (q1 + q2);
                         aggregator[email].q3Score += q3;
-                        aggregator[email].submittedWeeks.push(weekNum);
-
-                        // Count Questions (> 0 score means attempted/solved)
+                        if (!isNaN(weekNum)) aggregator[email].submittedWeeks.push(weekNum);
                         if (q1 > 0) aggregator[email].questionsCompleted++;
                         if (q2 > 0) aggregator[email].questionsCompleted++;
                         if (q3 > 0) aggregator[email].questionsCompleted++;
-
-                        // Update name if a newer one is found (just in case)
                         if (submission.name) aggregator[email].name = submission.name;
                     });
                 });
 
-                // 3. CALCULATE STREAK & FINALIZE
                 const processed = Object.values(aggregator).map(p => {
-                    // Streak Logic: Count consecutive weeks backwards from the LATEST week
                     let streak = 0;
                     const weeksSet = new Set(p.submittedWeeks);
-
-                    // If latestWeek is 5, we check 5, 4, 3...
-                    // If they missed week 5, streak is 0.
                     for (let i = latestWeekNo; i >= 0; i--) {
-                        if (weeksSet.has(i)) {
-                            streak++;
-                        } else {
-                            break; // Streak broken
-                        }
+                        if (weeksSet.has(i)) streak++;
+                        else break;
                     }
-
                     return { ...p, streak };
                 });
 
-                // 4. SORTING LOGIC (5 Levels as requested)
                 processed.sort((a, b) => {
-                    // 1. Total Score
                     if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
-                    // 2. Brownie Points (Q1 + Q2)
                     if (b.browniePoints !== a.browniePoints) return b.browniePoints - a.browniePoints;
-                    // 3. Q3 Score
                     if (b.q3Score !== a.q3Score) return b.q3Score - a.q3Score;
-                    // 4. Questions Attempted
                     if (b.questionsCompleted !== a.questionsCompleted) return b.questionsCompleted - a.questionsCompleted;
-                    // 5. Streak
                     return b.streak - a.streak;
                 });
 
-                // 5. ASSIGN RANKS
                 const ranked = processed.map((p, index) => ({
                     ...p,
                     rank: index + 1
                 }));
 
                 setData(ranked);
-
             } catch (err) {
                 console.error("Aggregation Error:", err);
                 setError("Failed to load leaderboard.");
@@ -129,9 +91,9 @@ const Leaderboard = () => {
                 setLoading(false);
             }
         };
-
-        buildDynamicLeaderboard();
+        buildDynamicLeaderboard().catch(err => console.error("Effect Error:", err));
     }, []);
+    // --- LOGIC END ---
 
     const CONTAINER_MAX_WIDTH = '1200px';
 
@@ -144,9 +106,27 @@ const Leaderboard = () => {
             fontFamily: "'Roboto', sans-serif"
         }}>
             <Header />
+
             <style>
                 {`
-                    /* GRID LAYOUT (5 Columns) */
+                    /* High Energy Animations */
+                    @keyframes floatCenter {
+                        0% { transform: translate(0, 0) scale(1); }
+                        50% { transform: translate(-10px, -20px) scale(1.1); }
+                        100% { transform: translate(0, 0) scale(1); }
+                    }
+                    @keyframes floatLeft {
+                        0% { transform: translate(0, 0) rotate(0deg); }
+                        50% { transform: translate(30px, 30px) rotate(10deg); }
+                        100% { transform: translate(0, 0) rotate(0deg); }
+                    }
+                    @keyframes floatRight {
+                        0% { transform: translate(0, 0) rotate(0deg); }
+                        50% { transform: translate(-30px, 20px) rotate(-10deg); }
+                        100% { transform: translate(0, 0) rotate(0deg); }
+                    }
+
+                    /* General Grid Styles */
                     .leaderboard-grid {
                         display: grid;
                         grid-template-columns: 80px minmax(200px, 1fr) 1fr 1fr 1fr;
@@ -164,7 +144,6 @@ const Leaderboard = () => {
                         letter-spacing: 0.5px;
                     }
                     .grid-header.name-col { text-align: left; padding-left: 24px; }
-
                     .grid-row-item {
                         font-weight: 500;
                         font-size: 0.95rem;
@@ -179,46 +158,124 @@ const Leaderboard = () => {
                         text-overflow: ellipsis;
                         white-space: nowrap;
                     }
-                    
-                    /* PODIUM */
-                    .podium-row .grid-row-item {
-                        padding: 22px 16px;
-                        font-size: 1.1rem;
-                    }
+                    .podium-row .grid-row-item { padding: 22px 16px; font-size: 1.1rem; }
                     .rank-1 { background-color: #FFF9E6; border-left: 4px solid #FFD700; }
                     .rank-2 { background-color: #F8F9FA; border-left: 4px solid #C0C0C0; }
                     .rank-3 { background-color: #FFF0E0; border-left: 4px solid #CD7F32; }
                     .leaderboard-row-container:hover { background-color: #F1F3F4; transition: 0.2s; }
-
-                    /* MOBILE */
                     .table-scroll-wrapper { overflow-x: auto; width: 100%; padding-bottom: 4px; }
                     .table-min-width { min-width: 900px; }
                 `}
             </style>
 
+            {/* --- HERO / HEADER SECTION --- */}
             <div style={{
-                backgroundColor: gdgTheme.colors.background.dark,
+                backgroundColor: '#0F172A', // Rich Dark Blue-Black (Better than pitch black)
                 width: '100%',
-                padding: `${gdgTheme.spacing.xxl} 0`,
+                padding: `${gdgTheme.spacing.xxxl} 0`,
                 borderBottom: `1px solid ${gdgTheme.colors.neutral.lightGray}`,
                 position: 'relative',
-                overflow: 'hidden'
+                overflow: 'hidden',
+                isolation: 'isolate'
             }}>
-                <GoogleOrbs />
+
+                {/* 1. VIBRANT LIQUID BACKGROUND (Centered & Bright) */}
+                <div style={{
+                    position: 'absolute',
+                    inset: 0,
+                    overflow: 'hidden',
+                    zIndex: 0
+                }}>
+                    {/* CENTER GLOW (Yellow/Gold for Leaderboard Optimism) */}
+                    <div style={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        width: '600px',
+                        height: '300px',
+                        background: 'radial-gradient(circle, rgba(251, 188, 4, 0.4) 0%, rgba(234, 67, 53, 0.1) 60%, transparent 100%)',
+                        filter: 'blur(60px)',
+                        animation: 'floatCenter 8s ease-in-out infinite',
+                        zIndex: 1
+                    }} />
+
+                    {/* LEFT ACCENT (Google Blue - High Visibility) */}
+                    <div style={{
+                        position: 'absolute',
+                        top: '-20%',
+                        left: '-10%',
+                        width: '500px',
+                        height: '500px',
+                        background: 'radial-gradient(circle, #4285F4 0%, transparent 70%)',
+                        filter: 'blur(80px)',
+                        opacity: 0.7,
+                        animation: 'floatLeft 12s ease-in-out infinite',
+                    }} />
+
+                    {/* RIGHT ACCENT (Google Green - High Visibility) */}
+                    <div style={{
+                        position: 'absolute',
+                        bottom: '-20%',
+                        right: '-10%',
+                        width: '500px',
+                        height: '500px',
+                        background: 'radial-gradient(circle, #34A853 0%, transparent 70%)',
+                        filter: 'blur(80px)',
+                        opacity: 0.6,
+                        animation: 'floatRight 15s ease-in-out infinite',
+                    }} />
+                </div>
+
+                {/* 2. FROSTED OVERLAY (Noise + Blur)
+                   This binds the colors together so they don't look like separate blobs.
+                */}
+                <div style={{
+                    position: 'absolute',
+                    inset: 0,
+                    backdropFilter: 'blur(20px)',
+                    WebkitBackdropFilter: 'blur(20px)',
+                    background: 'rgba(15, 23, 42, 0.3)', // Slight tint matching bg color
+                    zIndex: 1,
+                    pointerEvents: 'none'
+                }} />
+
+                {/* 3. CONTENT (Text) */}
                 <div style={{
                     maxWidth: CONTAINER_MAX_WIDTH,
                     margin: '0 auto',
                     padding: `0 ${gdgTheme.spacing.xl}`,
                     textAlign: 'center',
                     position: 'relative',
-                    zIndex: 1
+                    zIndex: 2
                 }}>
-                    <GoogleBrandLines variant="dynamic" size="medium" gap="8px" style={{ justifyContent: 'center', marginBottom: gdgTheme.spacing.lg }} />
-                    <h1 style={{ ...gdgTheme.typography.styles.heroTitle, color: gdgTheme.colors.primary.blue, marginBottom: gdgTheme.spacing.sm }}>
-                        Leaderboard
+                    <GoogleBrandLines
+                        variant="dynamic"
+                        size="medium"
+                        gap="8px"
+                        style={{ justifyContent: 'center', marginBottom: gdgTheme.spacing.lg }}
+                    />
+
+                    <h1 style={{
+                        ...gdgTheme.typography.styles.heroTitle,
+                        color: '#ffffff',
+                        marginBottom: gdgTheme.spacing.sm,
+                        letterSpacing: '-0.02em',
+                        position: 'relative'
+                    }}>
+                        <span style={{
+                            // Crisp White text with a colored glow is more readable on bright backgrounds
+                            color: '#ffffff',
+                            textShadow: '0 0 30px rgba(66, 133, 244, 0.6), 0 0 10px rgba(0,0,0,0.5)',
+                            display: 'inline-block',
+                            paddingBottom: '10px'
+                        }}>
+                            Leaderboard
+                        </span>
                     </h1>
                 </div>
             </div>
+            {/* --- END HERO --- */}
 
             <div style={{ width: '100%', padding: `${gdgTheme.spacing.xl} 0`, flex: 1 }}>
                 <div style={{ maxWidth: CONTAINER_MAX_WIDTH, margin: '0 auto', padding: `0 ${gdgTheme.spacing.xl}` }}>

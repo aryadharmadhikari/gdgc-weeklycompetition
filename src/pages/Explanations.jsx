@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import './LiveQuiz.css';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/useAuth';
 import AdminPanel from '../Admin/AdminPanel';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
@@ -121,29 +121,35 @@ const Explanations = () => {
     const [openQuestionId, setOpenQuestionId] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            // Fetches data grouped by week
             const data = await getQuizWeeks();
             setAllData(data);
 
             const weekKeys = Object.keys(data);
-            if (weekKeys.length > 0 && !selectedWeek) {
-                // Default to the highest week number
-                const sortedWeeks = weekKeys.sort((a, b) => Number(b) - Number(a));
-                setSelectedWeek(sortedWeeks[0]);
+            // Check if we need to set a default week (only if one isn't selected yet)
+            if (weekKeys.length > 0) {
+                // Use functional state update to safely check 'selectedWeek' without adding it as a dependency
+                setSelectedWeek(prevWeek => {
+                    if (!prevWeek) {
+                        const sortedWeeks = weekKeys.sort((a, b) => Number(b) - Number(a));
+                        return sortedWeeks[0];
+                    }
+                    return prevWeek;
+                });
             }
         } catch (error) {
             console.error("Failed to load explanations:", error);
         } finally {
             setLoading(false);
         }
-    };
+    }, []); // Empty dependency array means this function never changes
 
+    // 3. Add fetchData to useEffect dependencies
     useEffect(() => {
         fetchData();
-    }, []);
+    }, [fetchData]); // Safe to add now because of useCallback
 
     const handleAdminClose = () => {
         setShowAdminPanel(false);

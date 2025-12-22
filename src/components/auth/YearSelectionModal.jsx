@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/useAuth';
 import { gdgTheme } from '../../theme/gdgctheme';
 
 const YearSelectionModal = () => {
     const { showYearModal, completeSignup } = useAuth();
-    const [year, setYear] = useState('FE'); // Default to First Year
+    const [year, setYear] = useState('FE');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // If the context says the modal is hidden, return null (render nothing)
     if (!showYearModal) return null;
 
     const handleSave = async () => {
@@ -16,40 +15,67 @@ const YearSelectionModal = () => {
         setIsSubmitting(false);
     };
 
+    // Safety check
+    if (!gdgTheme || !gdgTheme.colors) {
+        return null;
+    }
+
     return (
         <div style={{
             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.8)', // Dark overlay
+            backgroundColor: 'rgba(0,0,0,0.8)',
             display: 'flex', justifyContent: 'center', alignItems: 'center',
             zIndex: 9999
         }}>
             <div style={{
-                backgroundColor: 'white',
-                padding: '2rem',
-                borderRadius: '12px',
+                backgroundColor: gdgTheme.colors.background.primary,
+                padding: gdgTheme.spacing.xl,
+                borderRadius: gdgTheme.borderRadius.xl,
                 width: '90%', maxWidth: '400px',
                 textAlign: 'center',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.2)'
+                boxShadow: gdgTheme.shadows.large,
+                fontFamily: gdgTheme.typography.primary.family
             }}>
-                <h2 style={{ color: '#333', marginBottom: '1rem', marginTop: 0 }}>
+                <h2 style={{
+                    color: gdgTheme.colors.text.primary,
+                    marginBottom: gdgTheme.spacing.md,
+                    marginTop: 0,
+                    // ✅ FIXED: Added .primary
+                    fontWeight: gdgTheme.typography.primary.weights.bold
+                }}>
                     Welcome to the Bootcamp! 🚀
                 </h2>
-                <p style={{ color: '#666', marginBottom: '1.5rem', lineHeight: '1.5' }}>
+                <p style={{
+                    color: gdgTheme.colors.text.secondary,
+                    marginBottom: gdgTheme.spacing.lg,
+                    lineHeight: '1.5'
+                }}>
                     We noticed this is your first time here.<br/>
                     <strong>Please select your current year.</strong>
                 </p>
 
-                <div style={{ marginBottom: '1.5rem', textAlign: 'left' }}>
-                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#444' }}>
+                <div style={{ marginBottom: gdgTheme.spacing.lg, textAlign: 'left' }}>
+                    <label style={{
+                        display: 'block',
+                        marginBottom: gdgTheme.spacing.sm,
+                        // ✅ FIXED: Added .primary
+                        fontWeight: gdgTheme.typography.primary.weights.bold,
+                        color: gdgTheme.colors.text.primary
+                    }}>
                         Year of Engineering
                     </label>
                     <select
                         value={year}
                         onChange={(e) => setYear(e.target.value)}
                         style={{
-                            width: '100%', padding: '12px',
-                            borderRadius: '6px', border: '1px solid #ccc',
-                            fontSize: '1rem', backgroundColor: '#f9f9f9'
+                            width: '100%',
+                            padding: '12px',
+                            borderRadius: gdgTheme.borderRadius.medium,
+                            border: `1px solid #ccc`,
+                            fontSize: '1rem',
+                            backgroundColor: gdgTheme.colors.background.secondary,
+                            fontFamily: gdgTheme.typography.primary.family,
+                            color: gdgTheme.colors.text.primary
                         }}
                     >
                         <option value="FE">FE (First Year)</option>
@@ -63,15 +89,18 @@ const YearSelectionModal = () => {
                     onClick={handleSave}
                     disabled={isSubmitting}
                     style={{
-                        backgroundColor: '#4285F4', color: 'white',
-                        border: 'none', padding: '14px 24px',
-                        borderRadius: '6px', fontSize: '1rem',
+                        backgroundColor: gdgTheme.colors.primary.blue,
+                        color: gdgTheme.colors.neutral.white,
+                        border: 'none',
+                        padding: '14px 24px',
+                        borderRadius: gdgTheme.borderRadius.medium,
+                        fontSize: '1rem',
+                        fontWeight: '500',
                         cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                        width: '100%', fontWeight: '600',
-                        transition: 'background 0.2s'
+                        width: '100%',
+                        transition: 'background 0.2s',
+                        boxShadow: gdgTheme.shadows.button
                     }}
-                    onMouseEnter={(e) => e.target.style.backgroundColor = '#3367D6'}
-                    onMouseLeave={(e) => e.target.style.backgroundColor = '#4285F4'}
                 >
                     {isSubmitting ? 'Saving Profile...' : 'Complete Registration'}
                 </button>

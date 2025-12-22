@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './LiveQuiz.css';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/useAuth';
 import AdminPanel from '../Admin/AdminPanel';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
@@ -10,12 +10,12 @@ import { getQuizWeeks, submitQuizWeek, getUserSubmission} from '../services/quiz
 
 // --- HELPER FUNCTION ---
 const isWeekExpired = (weekData) => {
-    if (!weekData || !weekData.startDate) return false; 
-    
+    if (!weekData || !weekData.startDate) return false;
+
     const start = new Date(weekData.startDate);
     const deadline = new Date(start);
-    deadline.setDate(start.getDate() + 7); 
-    
+    deadline.setDate(start.getDate() + 7);
+
     return new Date() > deadline;
 };
 
@@ -47,7 +47,21 @@ const QnaBox = ({ qna, setQna }) => (
         <textarea className="qna-textarea" value={qna} onChange={(e) => setQna(e.target.value)} placeholder="Type questions or notes..." />
     </div>
 );
-const QuestionAccordion = ({ question, solution, onSolutionChange, qna, onQnaChange, isOpen, onClick }) => (
+
+// --- NEW COMPONENT: Explanation Box ---
+const ExplanationBox = ({ explanation, setExplanation }) => (
+    <div className="explanation-wrapper">
+        <h4 className="explanation-title">Logic Explanation <span className="required-star">*</span></h4>
+        <textarea
+            className="explanation-textarea"
+            value={explanation}
+            onChange={(e) => setExplanation(e.target.value)}
+            placeholder="Please explain the logic behind your solution..."
+        />
+    </div>
+);
+
+const QuestionAccordion = ({ question, solution, onSolutionChange, qna, onQnaChange, explanation, onExplanationChange, isOpen, onClick, index }) => (
     <div className={`question-card ${question.isMaster ? 'master-question' : ''}`}>
         <div className="question-header" onClick={onClick}>
             <h3>{question.title} {question.isMaster && <span className="master-tag">(Mandatory)</span>}</h3>
@@ -55,12 +69,22 @@ const QuestionAccordion = ({ question, solution, onSolutionChange, qna, onQnaCha
         </div>
         {isOpen && (
             <div className="question-body">
+                <h4 className="question-title">Problem Statement:</h4>
                 <p className="question-prompt">{question.description || question.prompt || "No details provided."}</p>
                 <TestCaseViewer testCases={question.testCases} />
                 <CodeEditor
                     code={solution.code} setCode={(c) => onSolutionChange(question.id, { ...solution, code: c })}
                     lang={solution.lang} setLang={(l) => onSolutionChange(question.id, { ...solution, lang: l })}
                 />
+
+                {/* Render ExplanationBox ONLY for the 3rd question (index 2) */}
+                {index === 2 && (
+                    <ExplanationBox
+                        explanation={explanation}
+                        setExplanation={(val) => onExplanationChange(question.id, val)}
+                    />
+                )}
+
                 <QnaBox qna={qna} setQna={(q) => onQnaChange(question.id, q)} />
             </div>
         )}
@@ -77,7 +101,7 @@ const LiveQuiz = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
 
-    const [allQuestions, setAllQuestions] = useState({}); 
+    const [allQuestions, setAllQuestions] = useState({});
     const [selectedWeek, setSelectedWeek] = useState(null);
     const [currentQuestions, setCurrentQuestions] = useState([]);
     const [alreadySubmitted, setAlreadySubmitted] = useState(false);
@@ -85,6 +109,7 @@ const LiveQuiz = () => {
     const [openQuestionId, setOpenQuestionId] = useState(null);
     const [solutions, setSolutions] = useState({});
     const [qnaMessages, setQnaMessages] = useState({});
+    const [explanations, setExplanations] = useState({}); // New state for explanations
 
     // 1. AUTH CHECK
     useEffect(() => {
@@ -106,7 +131,6 @@ const LiveQuiz = () => {
                     const latestWeek = sortedWeeks[0];
 
                     setSelectedWeek(latestWeek);
-                    // Updated to access .questions
                     setCurrentQuestions(data[latestWeek].questions || []);
                 }
             } catch (err) {
@@ -123,7 +147,6 @@ const LiveQuiz = () => {
     // Update current questions when selected week changes
     useEffect(() => {
         if (selectedWeek && allQuestions[selectedWeek]) {
-            // Updated to access .questions
             setCurrentQuestions(allQuestions[selectedWeek].questions || []);
             setOpenQuestionId(null);
             setError('');
@@ -140,26 +163,37 @@ const LiveQuiz = () => {
                 setAlreadySubmitted(false);
                 setSolutions({});
                 setQnaMessages({});
+                setExplanations({});
 
                 if (user) {
-                    setLoading(true); 
+                    setLoading(true);
                     const submission = await getUserSubmission(user.email, selectedWeek);
 
                     if (submission) {
                         setAlreadySubmitted(true);
                         const prevSolutions = {};
                         const prevQna = {};
+                        const prevExplanations = {};
 
                         submission.solutions.forEach(sol => {
                             prevSolutions[sol.questionId] = {
                                 code: sol.code,
                                 lang: sol.language
                             };
-                            prevQna[sol.questionId] = sol.qna;
+
+                            // Logic to extract explanation from qna if it exists
+                            if (sol.qna && sol.qna.includes('|||EXPL|||')) {
+                                const parts = sol.qna.split('|||EXPL|||');
+                                prevExplanations[sol.questionId] = parts[0];
+                                prevQna[sol.questionId] = parts[1];
+                            } else {
+                                prevQna[sol.questionId] = sol.qna;
+                            }
                         });
 
                         setSolutions(prevSolutions);
                         setQnaMessages(prevQna);
+                        setExplanations(prevExplanations);
                     }
                     setLoading(false);
                 }
@@ -177,12 +211,26 @@ const LiveQuiz = () => {
         setQnaMessages(prev => ({ ...prev, [questionId]: newQna }));
     };
 
+    const handleExplanationChange = (questionId, newExpl) => {
+        setExplanations(prev => ({ ...prev, [questionId]: newExpl }));
+    };
+
     const handleToggle = (questionId) => {
         setOpenQuestionId(prev => (prev === questionId ? null : questionId));
     };
 
+    // --- EXPIRATION CHECK ---
+    const currentWeekData = allQuestions[selectedWeek];
+    const isExpired = isWeekExpired(currentWeekData);
+
     const handleSubmit = async () => {
         if (!user) return;
+
+        // 1. Strict Expiration Check
+        if (isExpired) {
+            setError('⛔ Competition Closed. You cannot submit anymore.');
+            return;
+        }
 
         const masterQuestion = currentQuestions.find(q => q.isMaster);
         const masterSolution = solutions[masterQuestion?.id]?.code || '';
@@ -191,6 +239,17 @@ const LiveQuiz = () => {
             setError('Error: The mandatory question for this week must be answered.');
             setOpenQuestionId(masterQuestion?.id);
             return;
+        }
+
+        // 2. Validate Explanation for 3rd Question (Index 2)
+        if (currentQuestions.length > 2) {
+            const thirdQuestion = currentQuestions[2];
+            const expl = explanations[thirdQuestion.id] || '';
+            if (!expl.trim()) {
+                setError(`Error: Please provide an explanation for Question 3 (${thirdQuestion.title}).`);
+                setOpenQuestionId(thirdQuestion.id);
+                return;
+            }
         }
 
         if (alreadySubmitted) {
@@ -203,13 +262,23 @@ const LiveQuiz = () => {
         setError('');
 
         try {
-            const formattedSolutions = currentQuestions.map(q => ({
-                questionId: q.id,
-                title: q.title,
-                language: solutions[q.id]?.lang || 'javascript',
-                code: solutions[q.id]?.code || '',
-                qna: qnaMessages[q.id] || ''
-            }));
+            const formattedSolutions = currentQuestions.map((q, index) => {
+                let finalQna = qnaMessages[q.id] || '';
+
+                // Append explanation to QnA for the 3rd question to save it
+                if (index === 2) {
+                    const expl = explanations[q.id] || '';
+                    finalQna = `${expl}|||EXPL|||${finalQna}`;
+                }
+
+                return {
+                    questionId: q.id,
+                    title: q.title,
+                    language: solutions[q.id]?.lang || 'javascript',
+                    code: solutions[q.id]?.code || '',
+                    qna: finalQna
+                };
+            });
 
             await submitQuizWeek(
                 user.email,
@@ -228,10 +297,6 @@ const LiveQuiz = () => {
             setIsSubmitting(false);
         }
     };
-
-    // --- LOGIC FOR EXPIRATION ---
-    const currentWeekData = allQuestions[selectedWeek];
-    const isExpired = isWeekExpired(currentWeekData);
 
     if (loading) return <div style={{padding:'2rem', textAlign:'center'}}>Loading Quiz...</div>;
     if (!user) return null;
@@ -281,17 +346,21 @@ const LiveQuiz = () => {
 
                     <div className="questions-container">
                         {currentQuestions.length > 0 ? (
-                            currentQuestions.map(question => {
+                            currentQuestions.map((question, index) => {
                                 const solution = solutions[question.id] || { code: '', lang: 'javascript' };
                                 const qna = qnaMessages[question.id] || '';
+                                const explanation = explanations[question.id] || '';
                                 return (
                                     <QuestionAccordion
                                         key={question.id}
+                                        index={index}
                                         question={question}
                                         solution={solution}
                                         onSolutionChange={handleSolutionChange}
                                         qna={qna}
                                         onQnaChange={handleQnaChange}
+                                        explanation={explanation}
+                                        onExplanationChange={handleExplanationChange}
                                         isOpen={openQuestionId === question.id}
                                         onClick={() => handleToggle(question.id)}
                                     />
@@ -309,7 +378,7 @@ const LiveQuiz = () => {
                             {/* --- DATE DISPLAY --- */}
                             {currentWeekData?.startDate && (
                                 <div style={{textAlign: 'center', marginBottom: '1rem', color: isExpired ? 'red' : 'green', fontWeight: 'bold'}}>
-                                    {isExpired 
+                                    {isExpired
                                         ? `Competition Closed (Ended ${new Date(new Date(currentWeekData.startDate).setDate(new Date(currentWeekData.startDate).getDate() + 7)).toLocaleString([], {dateStyle: 'medium', timeStyle: 'short'})})`
                                         : `Ends on ${new Date(new Date(currentWeekData.startDate).setDate(new Date(currentWeekData.startDate).getDate() + 7)).toLocaleString([], {dateStyle: 'medium', timeStyle: 'short'})}`
                                     }
@@ -320,16 +389,19 @@ const LiveQuiz = () => {
                             <button
                                 className="submit-quiz-button"
                                 onClick={handleSubmit}
-',
-                                    marginTop: 0 
-                                }} 
+                                disabled={isSubmitting || isExpired} // STRICTLY DISABLED IF EXPIRED
+                                style={{
+                                    opacity: (isSubmitting || isExpired) ? 0.7 : 1,
+                                    cursor: (isSubmitting || isExpired) ? 'not-allowed' : 'pointer',
+                                    marginTop: 0
+                                }}
                             >
-                                {isSubmitting 
-                                    ? 'Processing...' 
-                                    : isExpired 
-                                        ? '⛔ Competition Closed' 
-                                        : alreadySubmitted 
-                                            ? `Update / Resubmit Week ${selectedWeek}` 
+                                {isSubmitting
+                                    ? 'Processing...'
+                                    : isExpired
+                                        ? '⛔ Competition Closed'
+                                        : alreadySubmitted
+                                            ? `Update / Resubmit Week ${selectedWeek}`
                                             : `Submit Week ${selectedWeek} Answers`
                                 }
                             </button>

@@ -49,7 +49,22 @@ Install the required packages:
 ```bash
 npm install
 ```
-### 4. Run the Application
+
+### 4. Configure Environment Variables
+This project uses Firebase and requires environment variables to run.
+
+1. Create a file named `.env` in the root directory of the project.
+2. Add the following keys to the file. You will need to create your own Firebase project or ask the project admin for these values:
+
+```env
+VITE_FIREBASE_API_KEY=your_api_key_here
+VITE_FIREBASE_AUTH_DOMAIN=your_project_id.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your_project_id
+VITE_FIREBASE_STORAGE_BUCKET=your_project_id.firebasestorage.app
+VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+```
+
+### 5. Run the Application
 Start the development server:
 ```bash
 npm run dev

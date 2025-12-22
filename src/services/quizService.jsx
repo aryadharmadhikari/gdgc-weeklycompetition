@@ -21,7 +21,6 @@ const USERS_COLLECTION = "users";
 
 /**
  * 🔍 Fetch Quiz Questions
- * Returns the FULL object (including startDate) so the frontend can check expiry.
  */
 export const getQuizWeeks = async () => {
     try {
@@ -32,7 +31,7 @@ export const getQuizWeeks = async () => {
         const weeksData = {};
         snapshot.forEach(doc => {
             const data = doc.data();
-            weeksData[data.id] = data; // Return full object
+            weeksData[data.id] = data;
         });
         return weeksData;
     } catch (error) {
@@ -43,10 +42,12 @@ export const getQuizWeeks = async () => {
 
 /**
  * 📝 Submit Quiz Answers
- * Includes security check for deadline.
+ * UPDATED: Stores document as 'week_{id}_{email}' containing full user details.
  */
-export const submitQuizWeek = async (userEmail, weekId, formattedSolutions) => {
+export const submitQuizWeek = async (userData, weekId, formattedSolutions) => {
     try {
+        const { email, name, uid } = userData;
+
         // 1. SECURITY CHECK: Fetch the Week Data first
         const weekDocId = `week${weekId}`;
         const weekRef = doc(db, WEEKS_COLLECTION, weekDocId);
@@ -65,38 +66,40 @@ export const submitQuizWeek = async (userEmail, weekId, formattedSolutions) => {
                 }
             }
         }
-        
-        // 2. Reference the Single User Submission Document
-        const userSubmissionRef = doc(db, SUBMISSIONS_COLLECTION, userEmail);
-        const userRef = doc(db, USERS_COLLECTION, userEmail);
 
-        // 3. Prepare the Payload
+        // 2. Reference the Composite Submission Document
+        // Format: submissions/week_1_student@dbit.in
+        const submissionDocId = `week_${weekId}_${email}`;
+        const submissionRef = doc(db, SUBMISSIONS_COLLECTION, submissionDocId);
+
+        // Reference to User Profile for Stats
+        const userRef = doc(db, USERS_COLLECTION, email);
+
+        // 3. Prepare the Flattened Payload (Optimized for DSA Download)
         const payload = {
-            weeks: {
-                [weekId]: {
-                    solutions: formattedSolutions,
-                    status: 'submitted',
-                    submittedAt: serverTimestamp(),
-                }
-            }
+            // Context
+            weekId: weekId.toString(),
+            submittedAt: serverTimestamp(),
+
+            // User Identity (Denormalized)
+            student_name: name,
+            student_email: email,
+            student_uid: uid,
+
+            // Content
+            solutions: formattedSolutions,
+            status: 'submitted'
         };
 
-        // 4. Check if this is a NEW submission (for scoring)
-        const docSnap = await getDoc(userSubmissionRef);
-        let isNewForScore = true;
+        // 4. Check if this is a NEW submission (for scoring logic)
+        const docSnap = await getDoc(submissionRef);
+        const isResubmission = docSnap.exists();
 
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            if (data.weeks && data.weeks[weekId]) {
-                isNewForScore = false;
-            }
-        }
+        // 5. Save to Firestore (Overwrite/Update specific week submission)
+        await setDoc(submissionRef, payload);
 
-        // 5. Save to Firestore
-        await setDoc(userSubmissionRef, payload, { merge: true });
-
-        // 6. Increment Score
-        if (isNewForScore) {
+        // 6. Increment Score on User Profile (Only if it's their first time submitting this week)
+        if (!isResubmission) {
             await updateDoc(userRef, {
                 questionsCompleted: increment(formattedSolutions.length),
                 completedWeeks: arrayUnion(weekId)
@@ -137,7 +140,6 @@ export const getNextWeekNumber = async () => {
     return Number(lastWeek.id) + 1;
 };
 
-// Updated to accept startDate
 export const addQuizWeek = async (weekId, weekTitle, questions, isVisible, startDate) => {
     try {
         const weekDocId = `week${weekId}`;
@@ -147,7 +149,7 @@ export const addQuizWeek = async (weekId, weekTitle, questions, isVisible, start
             id: weekId.toString(),
             title: weekTitle,
             isVisible: isVisible,
-            startDate: startDate || null, 
+            startDate: startDate || null,
             questions: questions,
             lastUpdated: serverTimestamp()
         });
@@ -166,7 +168,7 @@ export const deleteQuizWeek = async (weekId) => {
     try {
         const weekDocId = `week${weekId}`;
         const weekRef = doc(db, WEEKS_COLLECTION, weekDocId);
-        
+
         await deleteDoc(weekRef);
         return { success: true };
     } catch (error) {
@@ -175,14 +177,18 @@ export const deleteQuizWeek = async (weekId) => {
     }
 };
 
+/**
+ * UPDATED: Fetches submission using the new Composite ID
+ */
 export const getUserSubmission = async (userEmail, weekId) => {
     try {
-        const docRef = doc(db, SUBMISSIONS_COLLECTION, userEmail);
+        // Construct the composite ID: week_1_student@dbit.in
+        const submissionDocId = `week_${weekId}_${userEmail}`;
+        const docRef = doc(db, SUBMISSIONS_COLLECTION, submissionDocId);
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
-            const data = docSnap.data();
-            return data.weeks ? data.weeks[weekId] : null;
+            return docSnap.data(); // Returns the whole object including 'solutions'
         } else {
             return null;
         }

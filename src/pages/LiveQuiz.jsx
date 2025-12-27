@@ -20,7 +20,7 @@ const isWeekExpired = (weekData) => {
 };
 
 const CodeEditor = ({ code, setCode, lang, setLang }) => {
-    const languages = ['javascript', 'python', 'java', 'c', 'c++'];
+    const languages = ['c','python', 'java', 'c++', 'javascript'];
     return (
         <div className="editor-wrapper">
             <div className="editor-toolbar">
@@ -35,9 +35,19 @@ const CodeEditor = ({ code, setCode, lang, setLang }) => {
 };
 const TestCaseViewer = ({ testCases }) => (
     <div className="test-cases-wrapper">
-        <h4 className="test-cases-title">Test Cases</h4>
+        <div className="test-cases-header">
+            <h4 className="test-cases-title">Test Cases</h4>
+            {/* Optional: Badge showing count */}
+            <span className="test-cases-count">{(testCases || []).length} Total</span>
+        </div>
+        
         <div className="test-cases-content">
-            {(testCases || []).map((testCase, index) => <pre key={index} className="test-case">{testCase}</pre>)}
+            {(testCases || []).map((testCase, index) => (
+                <div key={index} className="test-case-card">
+                    <span className="test-case-label">Case {index + 1}</span>
+                    <pre className="test-case-code">{testCase}</pre>
+                </div>
+            ))}
         </div>
     </div>
 );
@@ -275,7 +285,7 @@ const LiveQuiz = () => {
                 return {
                     questionId: q.id,
                     title: q.title,
-                    language: solutions[q.id]?.lang || 'javascript',
+                    language: solutions[q.id]?.lang || 'c',
                     code: solutions[q.id]?.code || '',
                     qna: finalQna
                 };
@@ -353,7 +363,7 @@ const LiveQuiz = () => {
                     <div className="questions-container">
                         {currentQuestions.length > 0 ? (
                             currentQuestions.map((question, index) => {
-                                const solution = solutions[question.id] || { code: '', lang: 'javascript' };
+                                const solution = solutions[question.id] || { code: '', lang: 'c' };
                                 const qna = qnaMessages[question.id] || '';
                                 const explanation = explanations[question.id] || '';
                                 return (

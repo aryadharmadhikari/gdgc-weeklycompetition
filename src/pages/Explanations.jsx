@@ -9,14 +9,14 @@ import { getQuizWeeks } from '../services/quizService'; // We will define this f
 
 // --- COMPONENT: Read-Only Code Editor ---
 const ReadOnlyCodeEditor = ({ solutions }) => {
-    const [viewLang, setViewLang] = useState('javascript');
+    const [viewLang, setViewLang] = useState('c');
 
     const languages = [
-        { id: 'javascript', label: 'JavaScript' },
+        { id: 'c', label: 'C' },
         { id: 'python', label: 'Python' },
         { id: 'java', label: 'Java' },
         { id: 'c', label: 'C' },
-        { id: 'cpp', label: 'C++' }
+        { id: 'javascript', label: 'JavaScript' }
     ];
 
     let displayCode = "// Solution not available.";
@@ -25,7 +25,7 @@ const ReadOnlyCodeEditor = ({ solutions }) => {
         displayCode = solutions;
     } else if (solutions && typeof solutions === 'object') {
         // Fallback to JS if specific lang missing, or show specific message
-        displayCode = solutions[viewLang] || solutions['javascript'] || "// No code provided for this language.";
+        displayCode = solutions[viewLang] || solutions['c'] || "// No code provided for this language.";
     }
 
     return (
@@ -54,15 +54,20 @@ const ReadOnlyCodeEditor = ({ solutions }) => {
     );
 };
 
-// --- COMPONENT: Test Case Viewer ---
 const TestCaseViewer = ({ testCases }) => (
     <div className="test-cases-wrapper">
-        <h4 className="test-cases-title">Test Cases</h4>
+        <div className="test-cases-header">
+            <h4 className="test-cases-title">Test Cases</h4>
+            {/* Optional: Badge showing count */}
+            <span className="test-cases-count">{(testCases || []).length} Total</span>
+        </div>
+        
         <div className="test-cases-content">
-            {(Array.isArray(testCases) ? testCases : [testCases || "No test cases provided."]).map((testCase, index) => (
-                <pre key={index} className="test-case">
-                    {testCase}
-                </pre>
+            {(testCases || []).map((testCase, index) => (
+                <div key={index} className="test-case-card">
+                    <span className="test-case-label">Case {index + 1}</span>
+                    <pre className="test-case-code">{testCase}</pre>
+                </div>
             ))}
         </div>
     </div>

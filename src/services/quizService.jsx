@@ -20,6 +20,33 @@ const SUBMISSIONS_COLLECTION = "submissions";
 const USERS_COLLECTION = "users";
 
 /**
+ * 🕒 HELPER: Check if a week has passed its 7-day deadline
+ */
+export const isWeekExpired = (weekData) => {
+    if (!weekData || !weekData.startDate) return false;
+    
+    const start = new Date(weekData.startDate);
+    const deadline = new Date(start);
+    deadline.setDate(start.getDate() + 7); // Adds 7 days
+    
+    return new Date() > deadline;
+};
+
+/**
+ * 🕒 HELPER: Check if a week is valid to show based on Start Date
+ * Returns true if Current Time >= Start Time
+ */
+export const isWeekLive = (weekData) => {
+    // Legacy support: If no start date but published, show it.
+    if (!weekData.startDate && weekData.isVisible) return true;
+    
+    const now = new Date();
+    const start = new Date(weekData.startDate);
+    
+    return now >= start;
+};
+
+/**
  * 🔍 Fetch Quiz Questions
  */
 export const getQuizWeeks = async () => {
@@ -31,7 +58,11 @@ export const getQuizWeeks = async () => {
         const weeksData = {};
         snapshot.forEach(doc => {
             const data = doc.data();
-            weeksData[data.id] = data;
+
+            // 🛡️ TIME FILTER: Check if the start time has actually arrived
+            if (isWeekLive(data)) {
+                weeksData[data.id] = data;
+            }
         });
         return weeksData;
     } catch (error) {
@@ -152,7 +183,7 @@ export const addQuizWeek = async (weekId, weekTitle, questions, isVisible, start
             startDate: startDate || null,
             questions: questions,
             lastUpdated: serverTimestamp()
-        });
+        }, { merge: true });
 
         return { success: true };
     } catch (error) {
@@ -195,5 +226,33 @@ export const getUserSubmission = async (userEmail, weekId) => {
     } catch (error) {
         console.error("Error checking submission:", error);
         return null;
+    }
+};
+
+/**
+ * 🔐 Fetch Weeks for EXPLANATIONS Page
+ * Returns ONLY weeks that are Published AND Expired (> 7 days)
+ */
+export const getSolutionWeeks = async () => {
+    try {
+        const weeksRef = collection(db, WEEKS_COLLECTION);
+        // 1. Get everything that is "Published"
+        const q = query(weeksRef, where("isVisible", "==", true));
+        const snapshot = await getDocs(q);
+
+        const weeksData = {};
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            
+            // 2. 🛡️ CRITICAL FILTER: Only include if the week is EXPIRED
+            if (isWeekExpired(data)) {
+                weeksData[data.id] = data;
+            }
+        });
+        
+        return weeksData;
+    } catch (error) {
+        console.error("Error fetching solution weeks:", error);
+        throw error;
     }
 };

@@ -54,7 +54,7 @@ export const registerNewUser = async (user, selectedYear) => {
         uid: user.uid,          // <--- ADDED: Crucial for Security Rules
         name: user.displayName,
         email: user.email,
-        role: "admin",          // ⚠️ NOTE: You might want to change this to "student" for production!
+        role: "student",          // ⚠️ NOTE: You might want to change this to "student" for production!
         collegeYear: selectedYear,
         branch: detectedBranch,
         score: 0,

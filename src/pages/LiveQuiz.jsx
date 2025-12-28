@@ -429,7 +429,7 @@ const LiveQuiz = () => {
                                     marginTop: '0.8rem',
                                     fontStyle: 'italic'
                                 }}>
-                                    Note: Your latest submission will overwrite previous answers and be used for the final score.
+                                    Note: Your latest submission will overwrite any previous answers and will be used for the final score.
                                 </p>
                             )}
                         </div>

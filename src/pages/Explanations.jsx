@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/useAuth';
 import AdminPanel from '../Admin/AdminPanel';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
-import { getQuizWeeks } from '../services/quizService'; // We will define this file below
+import { getSolutionWeeks } from '../services/quizService';
 
 // --- COMPONENT: Read-Only Code Editor ---
 const ReadOnlyCodeEditor = ({ solutions }) => {
@@ -15,7 +15,7 @@ const ReadOnlyCodeEditor = ({ solutions }) => {
         { id: 'c', label: 'C' },
         { id: 'python', label: 'Python' },
         { id: 'java', label: 'Java' },
-        { id: 'c', label: 'C' },
+        { id: 'c++', label: 'C++' },
         { id: 'javascript', label: 'JavaScript' }
     ];
 
@@ -129,7 +129,7 @@ const Explanations = () => {
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            const data = await getQuizWeeks();
+            const data = await getSolutionWeeks();
             setAllData(data);
 
             const weekKeys = Object.keys(data);

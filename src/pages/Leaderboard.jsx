@@ -370,7 +370,7 @@ const Leaderboard = () => {
                                                     Scores will be updated here after the DSA team completes the evaluation.
                                                 </p>
                                                 <br />
-                                                <a href="/quiz" style={{
+                                                <a href="/live-quiz" style={{
                                                     display: 'inline-block',
                                                     padding: '12px 24px',
                                                     backgroundColor: '#1a73e8',

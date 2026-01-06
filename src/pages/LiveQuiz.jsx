@@ -20,7 +20,29 @@ const isWeekExpired = (weekData) => {
 };
 
 const CodeEditor = ({ code, setCode, lang, setLang }) => {
-    const languages = ['c','python', 'java', 'c++', 'javascript'];
+    const languages = ['c', 'python', 'java', 'c++', 'javascript'];
+
+    // Function to handle the Tab key press
+    const handleKeyDown = (e) => {
+        if (e.key === 'Tab') {
+            e.preventDefault(); // Stops the focus from moving to the next box
+
+            const start = e.target.selectionStart;
+            const end = e.target.selectionEnd;
+            const spaces = "    "; // 4 spaces for a tab
+
+            // Insert spaces at the cursor position
+            const newCode = code.substring(0, start) + spaces + code.substring(end);
+            
+            setCode(newCode);
+
+            // Move the cursor forward by 4 spaces
+            setTimeout(() => {
+                e.target.selectionStart = e.target.selectionEnd = start + 4;
+            }, 0);
+        }
+    };
+
     return (
         <div className="editor-wrapper">
             <div className="editor-toolbar">
@@ -29,7 +51,14 @@ const CodeEditor = ({ code, setCode, lang, setLang }) => {
                     {languages.map((l) => <option key={l} value={l}>{l.charAt(0).toUpperCase() + l.slice(1)}</option>)}
                 </select>
             </div>
-            <textarea className="code-editor" value={code} onChange={(e) => setCode(e.target.value)} placeholder="Write your code here..." spellCheck="false" />
+            <textarea
+                className="code-editor"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                onKeyDown={handleKeyDown} 
+                placeholder="Write your code here..."
+                spellCheck="false"
+            />
         </div>
     );
 };
